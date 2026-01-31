@@ -1,0 +1,28 @@
+Install python, then verify installation
+
+---------
+
+Use python to parse and understand the 
+"excel_app.xlsx" file and put the result in the "### Data" 
+section of the "the_excel_i_have.md" file.
+
+You should extract every detail of the excel file: sheets, tables, user inputs, formulas, 
+cell dependencies, plots, etc
+
+---------
+
+Implement the app specified in 
+developer_spec.md
+
+The app will be based on this excel file 
+excel_app.xlsx
+ 
+The directory strcture of the project is explained at 
+directory_structure.md
+
+But first:
+
+1. Ask clarifying questions
+2. Build the refined spec that you will actually use to build the app. It should be writtten at 
+refined_spec.md
+ . It should be a formal spec good for implementing.

@@ -1,0 +1,52 @@
+/* Daily Income Entry Row Styles */
+.daily-income-entry-row {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.daily-income-entry-row input {
+    /* Match btn-secondary style */
+    background-color: var(--secondary-color);
+    color: #fff;
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-md);
+    /* Input specific adjustments */
+    flex: 1;
+}
+
+.daily-income-entry-row input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.daily-income-entry-row input:focus {
+    background-color: #5a6268;
+    /* darken slightly like hover */
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.5);
+}
+
+.daily-income-entry-row .btn-remove-entry {
+    background: transparent;
+    border: none;
+    color: var(--danger-color);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 var(--spacing-sm);
+    display: flex;
+    align-items: center;
+}
+
+.daily-income-entry-row .btn-remove-entry:hover {
+    color: #c82333;
+}
+
+.daily-entries-list {
+    margin-bottom: var(--spacing-lg);
+    /* Separation from add button */
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px dashed var(--border-color);
+    /* Optional: extra visual separation */
+}

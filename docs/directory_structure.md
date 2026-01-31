@@ -1,0 +1,14 @@
+- .agent
+    - rules
+        - coding.md: coding rules for the agent
+- docs: project documentation
+    - directory_structure.md: directory structure of the project
+    - the_excel_i_have.md: explanation of the excel file i have
+    - tool_docs: documentation of the tools/libraries used in the project
+- legacy: old folders/files that should be used as reference
+    - excel_app.xlsx: app implemented as excel spreadsheet
+- specs
+    - developer_spec.md: user explanation of the app he wants to build
+    - refined_spec.md: formal spec built from user_spec.md, to be used as guide for the agent
+- src: source code of the app
+- tests: tests for the app, directory strcture mimicks src's directory structure

@@ -1,0 +1,343 @@
+/**
+ * Modal Styles
+ */
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal.show {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+}
+
+.modal-lg .modal-content,
+.modal-content.modal-lg {
+    max-width: 700px;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+}
+
+.modal-close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background-color: transparent;
+    color: var(--text-secondary);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.modal-content form {
+    padding: var(--spacing-lg);
+}
+
+.modal-content .form-actions {
+    margin-top: var(--spacing-lg);
+}
+
+/* Confirmation dialog */
+.confirm-dialog {
+    text-align: center;
+    padding: var(--spacing-xl);
+}
+
+.confirm-dialog .icon {
+    font-size: 48px;
+    margin-bottom: var(--spacing-md);
+}
+
+.confirm-dialog .icon.warning {
+    color: var(--warning-color);
+}
+
+.confirm-dialog .icon.danger {
+    color: var(--danger-color);
+}
+
+.confirm-dialog .message {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.confirm-dialog .actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-md);
+}
+
+/* Overlay loading */
+.modal-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Tutorial modal */
+.tutorial-content {
+    padding: var(--spacing-lg);
+}
+
+.tutorial-step {
+    margin-bottom: var(--spacing-lg);
+}
+
+.tutorial-step h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--primary-color);
+}
+
+.tutorial-step p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.tutorial-step ul {
+    margin-top: var(--spacing-sm);
+    padding-left: var(--spacing-lg);
+}
+
+.tutorial-step li {
+    margin-bottom: var(--spacing-xs);
+    color: var(--text-secondary);
+}
+
+/* Expanded Modal Sizes */
+.modal-content.modal-xl {
+    max-width: 1200px;
+    width: 95%;
+    animation: zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes zoomIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Day Detail Modal Styles */
+.day-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 300px;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
+}
+
+.day-detail-section {
+    background-color: var(--bg-tertiary);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+}
+
+.day-detail-section h4 {
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.detail-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 500px;
+}
+
+.detail-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.detail-summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacing-sm);
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius-sm);
+}
+
+.detail-summary-item .label {
+    color: var(--text-secondary);
+}
+
+.detail-summary-item .value {
+    font-weight: 600;
+}
+
+.detail-summary-item .value.positive {
+    color: var(--success-color);
+}
+
+.detail-summary-item .value.negative {
+    color: var(--danger-color);
+}
+
+/* Vertical buttons for choices */
+.form-actions.vertical {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+}
+
+.form-actions.vertical button {
+    width: 100%;
+    text-align: left;
+    padding: var(--spacing-md);
+}
+
+
+
+/* Hover effect for calendar days */
+.calendar-day:not(.empty) {
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.calendar-day:not(.empty):hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-md);
+    z-index: 10;
+}
+
+/* Specific override for Day Detail Modal */
+#day-detail-modal .calendar-expense-item .line-b {
+    color: #28a745 !important;
+}
+
+/* Daily Income Entry Row Styles */
+.daily-income-entry-row {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.daily-income-entry-row input {
+    /* Match btn-secondary style */
+    background-color: var(--secondary-color);
+    color: #fff;
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-md);
+    /* Input specific adjustments */
+    flex: 1;
+}
+
+.daily-income-entry-row input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.daily-income-entry-row input:focus {
+    background-color: #5a6268;
+    /* darken slightly like hover */
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.5);
+}
+
+.daily-income-entry-row .btn-remove-entry {
+    background: transparent;
+    border: none;
+    color: var(--danger-color);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 var(--spacing-sm);
+    display: flex;
+    align-items: center;
+}
+
+.daily-income-entry-row .btn-remove-entry:hover {
+    color: #c82333;
+}
+
+.daily-entries-list {
+    margin-bottom: var(--spacing-lg);
+    /* Separation from add button */
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px dashed var(--border-color);
+    /* Optional: extra visual separation */
+}

@@ -1,0 +1,308 @@
+/**
+ * Form Styles
+ */
+
+.form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="email"],
+.form-group input[type="password"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    font-size: var(--font-size-md);
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.2);
+}
+
+.form-group input[type="color"] {
+    width: 60px;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--bg-input);
+    cursor: pointer;
+}
+
+.form-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-right: var(--spacing-sm);
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.form-group label:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.form-group small {
+    display: block;
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+}
+
+.form-row {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-md);
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: #fff;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: #5a6268;
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #c82333;
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: #fff;
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: #218838;
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background-color: var(--bg-tertiary);
+}
+
+/* Input validation states */
+.form-group.error input,
+.form-group.error select {
+    border-color: var(--danger-color);
+}
+
+.form-group.error .error-message {
+    display: block;
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+    color: var(--danger-color);
+}
+
+.form-group.warning input,
+.form-group.warning select {
+    border-color: var(--warning-color);
+}
+
+.form-group.warning .warning-message {
+    display: block;
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+    color: var(--warning-color);
+}
+
+/* Editable input (matching Excel blue) */
+.editable-input {
+    background-color: var(--input-bg) !important;
+    color: #000 !important;
+}
+
+.editable-input:focus {
+    background-color: var(--input-bg-dark) !important;
+}
+
+/* Settings sections */
+.settings-section {
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings-section h4 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Daily Income Panel */
+.daily-income-panel {
+    grid-column: span 2;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.daily-income-panel .panel-header {
+    margin-bottom: var(--spacing-sm);
+    background-color: transparent;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 0 var(--spacing-xs) 0;
+}
+
+.daily-income-grid {
+    display: grid;
+    /* Wider columns to accommodate large numbers */
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0;
+    max-height: 350px;
+    /* Increased height for potentially more rows */
+    overflow-y: auto;
+    padding-right: 0;
+    border: 1px solid white;
+}
+
+.daily-income-item {
+    background-color: #002060;
+    /* Darker Blue as requested */
+    border: 1px solid white;
+    position: relative;
+    min-height: 50px;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.daily-income-item:hover {
+    background-color: #003366;
+    /* Slightly lighter on hover */
+}
+
+.daily-item-header {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    pointer-events: none;
+    /* Click through to input if needed, though input covers usually */
+    z-index: 1;
+}
+
+.daily-income-item label {
+    font-size: 10px;
+    color: white;
+    font-weight: bold;
+}
+
+.daily-income-item input {
+    width: 100%;
+    height: 100%;
+    padding: 16px 4px 4px 4px;
+    /* Padding top to avoid overlapping label */
+    border: none;
+    border-radius: 0;
+    background-color: transparent !important;
+    /* Transparent to show Royal Blue */
+    color: #FFFF00 !important;
+    /* Bright Yellow */
+    font-weight: bold;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    text-align: right;
+    transition: all 0.2s;
+    z-index: 2;
+}
+
+.daily-income-item input:focus {
+    outline: none;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    /* Slight  highlight */
+    box-shadow: inset 0 0 0 1px white;
+}
+
+.daily-income-item input::-webkit-inner-spin-button,
+.daily-income-item input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.hidden {
+    display: none !important;
+}

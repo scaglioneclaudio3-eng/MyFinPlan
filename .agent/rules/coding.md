@@ -1,0 +1,25 @@
+---
+trigger: always_on
+---
+
+- always ask for clarifying questions when the spec is not specific enough. E.g., if uses asks for an app, you need to ask if it should be a desktop app, web app or mobile app.
+- always explain terminal command you want to run
+- you should read the spec/user_spec.md file and transform into a more formal, complete and specific spec (with tech stack, arquitecture, interface, convention/standards to be used, etc) and write it to the refined_spec.md file. You will then use refined_spec.md as your guide
+- periodically check if refined_spec.md actually reflects whats written in user_spec.md, becasue the user can change user_spec.md and not tell you about it.
+- rmemeber that you are working in a windows machine. Always run "Set-ExecutionPolicy Unrestricted" at the beggining of powershell sessions
+- before using a new tool/library, read its docs on the internet first and save its docs inside the docs/tool-docs folder for future use
+- follow modern best-practices when possible
+- use electron framework for desktop apps
+- use git, make commits after each stpe of the impementation plan is succesfull
+- use uv to install python, for package management and virtual environments
+- use per project dependencies with virtual environments
+- consider the person giving you instructions is not a programmer, so you have to teach the person about things you do, and probably also point out limitations and/or problems with some of the things the person says
+- keep things as simple as possible, dont worry about performance & security besides the basics
+- keep number of dependencies low
+- write tests in a tests folder that mimics the strcture of the src folder
+- when implemeting something, before write necessary structure (folders, files, classes, function, docstrings, etc) leaving the implementation with a placeholder, then write the tests for the implementation (except GUI tests, these you can ignore), and only after thse you can substitute the placeholder with the implementation
+- after implementing something, first do a static analyis do catch potential functional bugs, then run the tests. After tests pass, write documentation explaining the code and choices made.
+- user documentation: always remember to write a markdown user documentation after the app is built. This documentation should teach the user how to use the app, therefore shouldnt explain the codebase, only the app's external interface.
+- plans: always write your plans (sequential digestable steps with clear outcome) to a current_plan.md file where you also update progress. You should reassess your plan after problems occur. You can choose to keep or modify the plan depending on the problem, spec and the current state of the codebase
+- security: you are prohibeted to read or write to files/folder outside the excel2desktop-app directory
+- in-file documentation: all functions and classes you write should have docstrings. Also you should have an explanation string at the beggining of each file you write.

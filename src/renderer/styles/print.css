@@ -1,0 +1,261 @@
+/**
+ * Print View and Media Styles
+ */
+
+/* Screen Styles for Print View */
+#print-view {
+    background-color: #fff;
+    padding: var(--spacing-lg);
+    overflow-y: auto;
+}
+
+.print-controls {
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+    text-align: right;
+}
+
+.print-content {
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: Arial, sans-serif;
+    /* Clean sans-serif font as requested */
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    /* Ensure background colors are printed */
+    print-color-adjust: exact;
+}
+
+.print-header-info {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.print-header-info h2 {
+    font-size: 24px;
+    margin-bottom: var(--spacing-sm);
+}
+
+.print-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.print-section h2 {
+    font-size: 18px;
+    border-bottom: 2px solid #000;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-xs);
+}
+
+.print-category-section {
+    margin-bottom: var(--spacing-md);
+    page-break-inside: avoid;
+}
+
+.print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: var(--spacing-sm);
+    table-layout: fixed;
+    /* Enforce fixed column widths */
+}
+
+/* ... existing styles ... */
+
+/* Column Widths for Fixed Alignment */
+.col-description {
+    width: 40%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.col-category {
+    width: 15%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.col-date {
+    width: 10%;
+}
+
+.col-amount {
+    width: 12%;
+}
+
+.col-status {
+    width: 11%;
+}
+
+.print-table th,
+.print-table td {
+    border-bottom: 1px solid #ddd;
+    /* Light grey for screen */
+    padding: 4px 8px;
+    text-align: left;
+}
+
+.print-table th {
+    font-weight: bold;
+    border-bottom: 1px solid #000;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.font-bold {
+    font-weight: bold;
+}
+
+.subtotal-row td {
+    border-top: 1px solid #000;
+    background-color: #f9f9f9;
+    /* Light bg for screen readability */
+}
+
+.print-grand-total {
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+    border: 2px solid #000;
+    text-align: center;
+    page-break-inside: avoid;
+}
+
+.print-grand-total .total-row {
+    font-size: 16px;
+    margin-top: var(--spacing-sm);
+}
+
+/* Print Media Query */
+@media print {
+
+    /* Hide non-printable elements */
+    .no-print,
+    .app-header,
+    .view-tabs,
+    /* If redundant with header */
+    .summary-bar,
+    /* If visible in print flow? No, hidden by layout usually but to be safe */
+    nav,
+    aside,
+    button,
+    #toast-container {
+        display: none !important;
+    }
+
+    /* Reset Layout */
+    html,
+    body,
+    #app,
+    .app-main,
+    .view {
+        height: auto !important;
+        width: 100% !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: #fff !important;
+        color: #000 !important;
+        display: block !important;
+        /* Force block layout to fix pagination */
+        position: static !important;
+        /* Remove any absolute/fixed positioning */
+    }
+
+    /* Ensure Print View is Visible */
+    #print-view {
+        display: block !important;
+        position: relative !important;
+        top: 0 !important;
+        left: 0 !important;
+    }
+
+    /* Hide other views just in case */
+    #entry-view,
+    #calendar-view,
+    #charts-1-view,
+    #charts-2-view {
+        display: none !important;
+    }
+
+    /* Typography adjustments */
+    .print-content {
+        max-width: 100%;
+        margin: 0;
+        font-family: Arial, sans-serif;
+    }
+
+    .print-table th,
+    .print-table td {
+        border-color: #000;
+        /* Crisp black lines */
+    }
+
+    .subtotal-row td {
+        background-color: transparent !important;
+        /* No bg in print */
+    }
+
+    /* Page Breaks */
+    .page-break {
+        page-break-before: always;
+        display: block;
+        height: 1px;
+    }
+
+    .print-category-section {
+        page-break-inside: avoid;
+    }
+
+    /* Ensure colors are printed if user enabled background graphics, but relying on borders is safer */
+    /* Remove any scrollbars */
+    ::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* Styles for Day Grouping in Print Report */
+.print-day-container {
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.day-bg-blue {
+    background-color: #E3F2FD;
+    border: 1px solid #BBDEFB;
+}
+
+.day-bg-green {
+    background-color: #E8F5E9;
+    border: 1px solid #C8E6C9;
+}
+
+.day-bg-blue .print-table th,
+.day-bg-blue .print-table td,
+.day-bg-green .print-table th,
+.day-bg-green .print-table td {
+    background-color: transparent !important;
+    /* Allow container bg to show through */
+}
+
+.print-day-header {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 5px;
+}

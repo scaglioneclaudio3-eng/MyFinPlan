@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <title>MyFinPlan</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/calendar.css">
+    <link rel="stylesheet" href="styles/forms.css">
+    <link rel="stylesheet" href="styles/modals.css">
+    <link rel="stylesheet" href="styles/print.css">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Header with month navigation -->
+        <header class="app-header">
+            <div class="month-nav">
+                <button id="prev-month" class="nav-btn" title="Mês Anterior">◀</button>
+                <div class="month-selector">
+                    <select id="month-select">
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                    <select id="year-select"></select>
+                </div>
+                <button id="next-month" class="nav-btn" title="Próximo Mês">▶</button>
+                <button id="today-btn" class="today-btn">Hoje</button>
+            </div>
+            <div class="view-tabs">
+                <button class="tab-btn active" data-view="entry">Lançamentos</button>
+                <button class="tab-btn" data-view="calendar">Calendário</button>
+                <button class="tab-btn" data-view="charts-1">Gráfico: Despesas por Categoria</button>
+                <button class="tab-btn" data-view="charts-2">Gráfico: Fluxos de Caixa Planejado e Efetivo</button>
+                <button class="tab-btn" data-view="print">Imprimir Despesas</button>
+            </div>
+        </header>
+
+        <!-- Main content area -->
+        <main class="app-main">
+            <!-- Entry View (Data Entry) -->
+            <section id="entry-view" class="view active">
+                <div class="entry-container">
+                    <!-- Categories and expenses panel -->
+                    <div class="expenses-panel">
+                        <div class="panel-header">
+                            <h2>Despesas</h2>
+                            <button id="add-category-btn" class="btn-icon" title="Adicionar Categoria">+</button>
+                        </div>
+                        <div class="category-list-header">
+                            <span class="header-color"></span>
+                            <span class="header-name">Categoria</span>
+                            <span class="header-future">Lembrete desp. futura</span>
+                            <span class="header-total">Total</span>
+                            <span class="header-actions"></span>
+                        </div>
+                        <div id="categories-container">
+                            <!-- Categories will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Income panel -->
+                    <div class="income-panel">
+                        <div class="panel-header">
+                            <h2>Receitas Esperadas</h2>
+                            <button id="add-income-btn" class="btn-icon" title="Adicionar Receita">+</button>
+                        </div>
+                        <div id="income-container">
+                            <!-- Income entries will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Daily Income panel -->
+                    <div id="daily-income-panel" class="daily-income-panel">
+                        <div class="panel-header">
+                            <h2>Receitas Efetivas Diárias</h2>
+                        </div>
+                        <div id="daily-income-grid" class="daily-income-grid">
+                            <!-- Daily inputs will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary bar -->
+                <div class="summary-bar">
+                    <div class="summary-item">
+                        <span class="summary-label">Receita Prevista</span>
+                        <span id="total-planned-income" class="summary-value income">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Receita Recebida</span>
+                        <span id="total-received-income" class="summary-value income">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Despesas Previstas</span>
+                        <span id="total-planned-expenses" class="summary-value expense">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Despesas Pagas</span>
+                        <span id="total-paid-expenses" class="summary-value expense">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Saldo Previsto</span>
+                        <span id="planned-balance" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Saldo Efetivo</span>
+                        <span id="actual-balance" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Multas/Juros Acum.</span>
+                        <span id="accumulated-fines" class="summary-value expense">R$ 0,00</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Calendar View -->
+            <section id="calendar-view" class="view">
+                <div id="calendar-grid" class="calendar-grid">
+                    <!-- Calendar days will be rendered here -->
+                </div>
+            </section>
+
+            <!-- Charts View 1 -->
+            <section id="charts-1-view" class="view">
+                <div class="chart-panel full-screen">
+                    <h3>Despesas por Categoria</h3>
+                    <canvas id="expenses-chart"></canvas>
+                </div>
+            </section>
+
+            <!-- Print View -->
+            <section id="print-view" class="view">
+                <div class="print-controls no-print">
+                    <button id="print-btn" class="btn btn-primary">🖨️ Imprimir</button>
+                </div>
+                <div class="print-content">
+                    <div class="print-header-info">
+                        <h2>Relatório de Despesas</h2>
+                        <p id="print-month-year"></p>
+                    </div>
+
+                    <div class="print-section" id="print-by-category">
+                        <h2>Despesas por Categoria</h2>
+                        <div id="print-category-container"></div>
+                    </div>
+
+                    <div class="page-break"></div>
+
+                    <div class="print-section" id="print-by-date">
+                        <h2>Despesas por Dia</h2>
+                        <div id="print-date-container"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts View 2 -->
+            <section id="charts-2-view" class="view">
+                <div class="chart-panel full-screen">
+                    <h3>Fluxo de Caixa Acumulado</h3>
+                    <canvas id="cashflow-chart"></canvas>
+                </div>
+            </section>
+        </main>
+
+
+    </div>
+
+    <!-- Modals -->
+    <!-- Category Modal -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="category-modal-title">Nova Categoria</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="category-form">
+                <div class="form-group">
+                    <label for="category-name">Nome</label>
+                    <input type="text" id="category-name" required maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label for="category-color">Cor</label>
+                    <input type="color" id="category-color" value="#4a90d9">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Expense Modal -->
+    <div id="expense-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="expense-modal-title">Nova Despesa</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="expense-form">
+                <input type="hidden" id="expense-id">
+                <input type="hidden" id="expense-category-id">
+                <div class="form-group">
+                    <label for="expense-description">Descrição</label>
+                    <input type="text" id="expense-description" required maxlength="100">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expense-planned-amount">Valor Previsto (R$)</label>
+                        <input type="number" id="expense-planned-amount" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-planned-date">Dia Vencimento</label>
+                        <input type="number" id="expense-planned-date" min="-1" max="31" required>
+                        <small>-1: Atrasado, 0: Futuro, 1-31: Dia</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expense-paid-amount">Valor Pago (R$)</label>
+                        <input type="number" id="expense-paid-amount" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-paid-date">Dia Pagamento</label>
+                        <input type="text" id="expense-paid-date" placeholder="Dia ou Dia/Mês">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="expense-special-type">Especifique abaixo, se despesa trabalhista</label>
+                    <select id="expense-special-type">
+                        <option value="">Não é trabalhista</option>
+                        <option value="SALARY_ADVANCE">Adiantamento Salarial (Dia 20)</option>
+                        <option value="INSS">INSS</option>
+                        <option value="FGTS">FGTS</option>
+                        <option value="FIFTH_WORKING_DAY">5º Dia Útil (Salário)</option>
+                        <option value="VALE_TRANSPORTE">Vale Transporte</option>
+                        <option value="VALE_ALIMENTACAO">Vale Alimentação</option>
+                        <option value="CESTA_BASICA">Cesta Básica</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="expense-is-template">
+                        Usar como modelo para próximos meses
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" id="delete-expense-btn"
+                        style="display:none;">Excluir</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Income Modal -->
+    <div id="income-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="income-modal-title">Nova Receita</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="income-form">
+                <input type="hidden" id="income-id">
+                <div class="form-group">
+                    <label for="income-description">Descrição</label>
+                    <input type="text" id="income-description" required maxlength="100">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="income-planned-amount">Valor Previsto (R$)</label>
+                        <input type="number" id="income-planned-amount" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="income-planned-date">Dia Previsto</label>
+                        <input type="text" id="income-planned-date" placeholder="ALL ou 1-31" required
+                            title="Digite 'ALL' para recorrente ou um dia (1-31)">
+                    </div>
+                </div>
+
+                <div class="form-row" id="income-received-row">
+                    <div class="form-group">
+                        <label for="income-received-amount">Valor Recebido (R$)</label>
+                        <input type="number" id="income-received-amount" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="income-received-date">Dia do Recebimento</label>
+                        <input type="text" id="income-received-date" placeholder="Dia ou Dia/Mês">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" id="delete-income-btn"
+                        style="display:none;">Excluir</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3>Configurações</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="settings-form">
+                <div class="settings-section">
+                    <h4>Receitas Previstas em Fins de Semana e Feriados</h4>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="setting-weekend-transfer">
+                            Transferir Porcentagens de Receitas Previstas Médias (datadas "all") de Fins de Semana e
+                            Feriados para o Primeiro Dia Útil Subsequente
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="setting-saturday-pct">% Sábado (Esperado)</label>
+                            <input type="number" id="setting-saturday-pct" min="0" max="100" value="50">
+                        </div>
+                        <div class="form-group">
+                            <label for="setting-sunday-pct">% Domingo (Esperado)</label>
+                            <input type="number" id="setting-sunday-pct" min="0" max="100" value="50">
+                        </div>
+                        <div class="form-group">
+                            <label for="setting-holiday-percentage">% feriado (esperado)</label>
+                            <input type="number" id="setting-holiday-percentage" min="0" max="100" value="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h4>Localização (para feriados)</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="setting-state">Estado</label>
+                            <select id="setting-state">
+                                <option value="">Selecione...</option>
+                                <option value="AC">Acre</option>
+                                <option value="AL">Alagoas</option>
+                                <option value="AP">Amapá</option>
+                                <option value="AM">Amazonas</option>
+                                <option value="BA">Bahia</option>
+                                <option value="CE">Ceará</option>
+                                <option value="DF">Distrito Federal</option>
+                                <option value="ES">Espírito Santo</option>
+                                <option value="GO">Goiás</option>
+                                <option value="MA">Maranhão</option>
+                                <option value="MT">Mato Grosso</option>
+                                <option value="MS">Mato Grosso do Sul</option>
+                                <option value="MG">Minas Gerais</option>
+                                <option value="PA">Pará</option>
+                                <option value="PB">Paraíba</option>
+                                <option value="PR">Paraná</option>
+                                <option value="PE">Pernambuco</option>
+                                <option value="PI">Piauí</option>
+                                <option value="RJ">Rio de Janeiro</option>
+                                <option value="RN">Rio Grande do Norte</option>
+                                <option value="RS">Rio Grande do Sul</option>
+                                <option value="RO">Rondônia</option>
+                                <option value="RR">Roraima</option>
+                                <option value="SC">Santa Catarina</option>
+                                <option value="SP">São Paulo</option>
+                                <option value="SE">Sergipe</option>
+                                <option value="TO">Tocantins</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="setting-city">Cidade</label>
+                            <input type="text" id="setting-city" maxlength="100">
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h4>Backup Automático</h4>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="setting-backup-enabled" checked>
+                            Ativar backup automático
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="setting-backup-days">Intervalo (dias)</label>
+                        <input type="number" id="setting-backup-days" min="1" max="30" value="7">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Copy Month Modal -->
+    <div id="copy-month-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Copiar Mês</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="copy-month-form">
+                <div class="form-group">
+                    <label for="copy-source-month">Mês Origem</label>
+                    <select id="copy-source-month"></select>
+                </div>
+                <div class="form-group">
+                    <label for="copy-target-month">Mês Destino</label>
+                    <select id="copy-target-month"></select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="copy-only-templates">
+                        Copiar apenas itens marcados como modelo
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Copiar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Daily Income Details Modal -->
+    <div id="daily-income-details-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="daily-income-details-title">Detalhamento da Receita do Dia</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="daily-income-entries" class="daily-entries-list">
+                    <!-- Dynamic entries will be added here -->
+                </div>
+                <button type="button" id="add-daily-entry-btn" class="btn btn-secondary btn-sm">+ Adicionar
+                    Item</button>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" id="save-daily-income-btn" class="btn btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Detail Modal (Expanded View) -->
+    <div id="day-detail-modal" class="modal">
+        <div class="modal-content modal-xl">
+            <div class="modal-header">
+                <h3 id="day-detail-title">Detalhamento do Dia</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="day-detail-grid">
+                    <div class="day-detail-section">
+                        <h4>Despesas</h4>
+                        <div id="day-detail-expenses" class="detail-list"></div>
+                    </div>
+                    <div class="day-detail-section">
+                        <h4>Receitas</h4>
+                        <div id="day-detail-incomes" class="detail-list"></div>
+                    </div>
+                    <div class="day-detail-section">
+                        <h4>Resumo do Dia</h4>
+                        <div id="day-detail-summary" class="detail-summary"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Worker Expense Date Choice Modal -->
+    <div id="worker-choice-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Ajuste de Data de Despesa Trabalhista</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Você inseriu uma despesa trabalhista em uma data diferente do dia 15 ou último dia do mês.</p>
+                <p>Como deseja proceder?</p>
+            </div>
+            <div class="form-actions vertical">
+                <button id="worker-choice-keep" class="btn btn-secondary">Manter data inserida (vencimento no dia útil
+                    anterior se feriado/FDS)</button>
+                <button id="worker-choice-15" class="btn btn-primary">Alterar para o dia 15</button>
+                <button id="worker-choice-last" class="btn btn-primary">Alterar para o último dia do mês</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notifications container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/dataStore.js"></script>
+    <script src="js/categories.js"></script>
+    <script src="js/expenses.js"></script>
+    <script src="js/income.js"></script>
+    <script src="js/calendar.js"></script>
+    <script src="js/chart.lib.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/modals.js"></script>
+    <script src="js/print.js"></script>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>

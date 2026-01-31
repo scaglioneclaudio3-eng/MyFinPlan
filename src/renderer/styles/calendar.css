@@ -1,0 +1,302 @@
+/**
+ * Calendar View Styles
+ */
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-xs);
+    padding: var(--spacing-md);
+}
+
+.calendar-header {
+    grid-column: span 7;
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.calendar-weekday {
+    text-align: center;
+    padding: var(--spacing-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+}
+
+.calendar-day {
+    min-height: 120px;
+    padding: var(--spacing-sm);
+    background-color: #FFFDD0;
+    /* Light Cream */
+    color: #1a1d24;
+    /* Dark text for contrast */
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.calendar-day:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+    background-color: #fff9c4;
+    /* Slightly different cream on hover */
+}
+
+.calendar-day.today {
+    border-color: var(--primary-color);
+    border-width: 2px;
+    background-color: #FFFF00;
+    /* Bright yellow for today */
+}
+
+.calendar-day.weekend {
+    background-color: #f5f5dc;
+    /* Beige for weekend */
+}
+
+.calendar-day.holiday {
+    background-color: #D1E8FF;
+    /* Light blue for holiday */
+}
+
+.calendar-day.empty {
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.calendar-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+}
+
+.calendar-day-number {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+}
+
+.calendar-day.today .calendar-day-number {
+    color: var(--primary-color);
+}
+
+.calendar-day-balance {
+    font-size: var(--font-size-xs);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.calendar-day-balance.positive {
+    background-color: rgba(40, 167, 69, 0.2);
+    color: var(--success-color);
+}
+
+.calendar-day-balance.negative {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: var(--danger-color);
+}
+
+.calendar-day-content {
+    font-size: 10px;
+    /* Smaller font for more data */
+    max-height: 100px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.calendar-expense-item {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 2px;
+}
+
+.calendar-expense-item .line-a,
+.calendar-expense-item .line-b {
+    display: flex;
+    justify-content: space-between;
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+.calendar-expense-item .line-a {
+    background-color: var(--bg-tertiary);
+    color: #FFFFFF;
+    /* Ensure white text on dark background */
+    padding: 1px 4px 0 0;
+    /* No left padding */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.calendar-expense-item .line-b {
+    /* Inherit font size (same as expenses) */
+    color: #000000;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 0 4px 0 10px;
+    /* Increased left padding for alignment with description (6px bar + 4px indent) */
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.calendar-expense-item .description {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: var(--spacing-xs);
+}
+
+.calendar-expense-item .amount {
+    font-family: 'Consolas', monospace;
+    white-space: nowrap;
+    padding: 0 2px;
+    border-radius: 2px;
+    color: inherit;
+    /* Inherit white from line-a by default */
+}
+
+/* Status colors for Planned Amount */
+.bg-bright-red {
+    background-color: #FF0000 !important;
+    color: #FFFFFF !important;
+}
+
+.bg-bright-yellow {
+    background-color: #FFFF00 !important;
+    color: #000000 !important;
+}
+
+.calendar-flux-item,
+.calendar-income-item-v2 {
+    display: flex;
+    justify-content: space-between;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 600;
+}
+
+.calendar-flux-item.plan {
+    color: var(--primary-color);
+}
+
+.calendar-flux-item.efetivo {
+    color: var(--success-color);
+}
+
+.calendar-income-item-v2.plan {
+    color: var(--secondary-color);
+    border-top: 1px solid var(--border-color);
+    margin-top: 2px;
+}
+
+.calendar-income-item-v2.efetivo {
+    color: var(--success-color);
+}
+
+.calendar-flux-item .amount,
+.calendar-income-item-v2 .amount {
+    font-family: 'Consolas', monospace;
+}
+
+/* Monthly Summary Grid (Compact Calendar) */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+}
+
+.summary-day {
+    padding: var(--spacing-sm);
+    background-color: #FFFDD0;
+    /* Light Cream */
+    color: #1a1d24;
+    /* Dark text for contrast */
+    border-radius: var(--border-radius);
+    min-height: 200px;
+    border: 1px solid var(--border-color);
+}
+
+.summary-day.today {
+    border-color: var(--primary-color);
+    border-width: 2px;
+    background-color: #FFFF00;
+    /* Bright yellow for today */
+}
+
+.summary-day.holiday {
+    background-color: #D1E8FF;
+    /* Light blue for holiday */
+}
+
+.summary-day-header {
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.summary-day-number {
+    font-weight: 600;
+}
+
+.summary-day-weekday {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+}
+
+.summary-items {
+    font-size: var(--font-size-xs);
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 1px 0;
+}
+
+.summary-item .desc {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.summary-item .val {
+    font-family: 'Consolas', monospace;
+    margin-left: var(--spacing-xs);
+}
+
+.summary-totals {
+    margin-top: var(--spacing-xs);
+    padding-top: var(--spacing-xs);
+    border-top: 1px solid var(--border-color);
+    font-weight: 500;
+}
+
+.summary-totals .expense-total {
+    color: var(--danger-color);
+}
+
+.summary-totals .income-total {
+    color: var(--success-color);
+}
+
+.summary-totals .balance {
+    font-weight: 600;
+}
+
+/* Holiday indicator */
+.holiday-indicator {
+    font-size: var(--font-size-xs);
+    color: var(--danger-color);
+    font-style: italic;
+}

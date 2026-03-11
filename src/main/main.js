@@ -16,6 +16,9 @@ autoUpdater.logger = console;
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
+// Set app name explicitly for dialogs
+app.setName('MyFinPlan');
+
 // Data storage paths (initialized after app is ready)
 let userDataPath, dataPath, monthsPath, backupsPath, cachePath;
 
@@ -320,7 +323,33 @@ function setupIpcHandlers() {
             return [];
         }
     });
+
+    // Show message dialog (replacing native alert for better title control)
+    ipcMain.handle('show-message', async (event, message, type = 'info') => {
+        const result = await dialog.showMessageBox(mainWindow, {
+            type: type,
+            title: 'MyFinPlan',
+            message: message,
+            buttons: ['OK']
+        });
+        return result;
+    });
+
+    // Show confirmation dialog (replacing native confirm)
+    ipcMain.handle('show-confirm', async (event, message) => {
+        const result = await dialog.showMessageBox(mainWindow, {
+            type: 'question',
+            title: 'MyFinPlan',
+            message: message,
+            buttons: ['Sim', 'Não'],
+            defaultId: 0,
+            cancelId: 1
+        });
+        // Return true if "Sim" (index 0) was clicked
+        return result.response === 0;
+    });
 }
+
 
 // ============== Auto-Update Functions ==============
 
@@ -390,7 +419,32 @@ app.whenReady().then(() => {
     // Check for updates after window is ready (only in production)
     if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'development') {
         setTimeout(() => {
-            autoUpdater.checkForUpdatesAndNotify();
+            // Explicitly disable updates until properly configured
+            const enableUpdates = false;
+            if (!enableUpdates) {
+                console.log('Auto-updates disabled. Set enableUpdates to true in main.js to enable.');
+                return;
+            }
+
+            const updateConfigPath = path.join(process.resourcesPath, 'app-update.yml');
+            // Check if config exists and is not generic/example
+            try {
+                if (fs.existsSync(updateConfigPath)) {
+                    const fileContent = fs.readFileSync(updateConfigPath, 'utf-8');
+                    // Simple check if it contains example.com or isn't configured propery
+                    if (fileContent.includes('example.com') || fileContent.includes('generic')) {
+                        console.log('Skipping auto-update: app-update.yml contains example.com or generic provider without proper URL');
+                    } else {
+                        autoUpdater.checkForUpdatesAndNotify().catch(err => {
+                            console.log('Update check failed:', err);
+                        });
+                    }
+                } else {
+                    console.log('Skipping auto-update check: app-update.yml not found');
+                }
+            } catch (error) {
+                console.error('Error reading update config:', error);
+            }
         }, 3000);
     }
 

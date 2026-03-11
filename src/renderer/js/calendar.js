@@ -273,3 +273,5 @@ const Calendar = {
         // Calendar is rendered when view is switched
     }
 };
+
+window.Calendar = Calendar;

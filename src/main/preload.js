@@ -41,5 +41,9 @@ contextBridge.exposeInMainWorld('api', {
     onExportFile: (callback) => ipcRenderer.on('export-file', (event, path) => callback(path)),
 
     // Remove listeners
-    removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
+    removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
+
+    // UI
+    showMessage: (message, type) => ipcRenderer.invoke('show-message', message, type),
+    showConfirm: (message) => ipcRenderer.invoke('show-confirm', message)
 });

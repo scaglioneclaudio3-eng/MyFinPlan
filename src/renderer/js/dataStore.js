@@ -27,25 +27,41 @@ const DataStore = {
 
     // Default categories (from Excel)
     defaultCategories: [
-        { id: generateId(), name: 'PESSOAL', color: '#4a90d9', order: 1 },
-        { id: generateId(), name: 'EXTRA EMPRESA', color: '#50c878', order: 2 },
-        { id: generateId(), name: 'MORADIA', color: '#ff6b6b', order: 3 },
-        { id: generateId(), name: 'PRESTAÇÕES/EMPRÉSTIMOS', color: '#ffd93d', order: 4 },
-        { id: generateId(), name: 'ACORDOS', color: '#6bcb77', order: 5 },
-        { id: generateId(), name: 'EXTRAS ENERGIA EMPRESA AGDES', color: '#9b59b6', order: 6 },
-        { id: generateId(), name: 'ADVOGADO/JURÍDICO', color: '#e67e22', order: 7 },
-        { id: generateId(), name: 'PAGAMENTO DE SALÁRIOS', color: '#3498db', order: 8 },
-        { id: generateId(), name: 'IMPOSTOS', color: '#e74c3c', order: 9 },
-        { id: generateId(), name: 'EXTRAS EMPRESA', color: '#1abc9c', order: 10 }
+        { id: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', name: 'PESSOAL', color: '#4a90d9', order: 1 },
+        { id: '2b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', name: 'EXTRA EMPRESA', color: '#50c878', order: 2 },
+        { id: '3b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', name: 'MORADIA', color: '#ff6b6b', order: 3 },
+        { id: '4b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', name: 'PRESTAÇÕES/EMPRÉSTIMOS', color: '#ffd93d', order: 4 },
+        { id: '5b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', name: 'ACORDOS', color: '#6bcb77', order: 5 },
+        { id: '6b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', name: 'EXTRAS ENERGIA EMPRESA AGDES', color: '#9b59b6', order: 6 },
+        { id: '7b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', name: 'ADVOGADO/JURÍDICO', color: '#e67e22', order: 7 },
+        { id: '8b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', name: 'PAGAMENTO DE SALÁRIOS', color: '#3498db', order: 8 },
+        { id: '9b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', name: 'IMPOSTOS', color: '#e74c3c', order: 9 },
+        { id: '0b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', name: 'EXTRAS EMPRESA', color: '#1abc9c', order: 10 }
     ],
 
     /**
      * Initializes the data store
      */
     async init() {
-        await this.loadSettings();
-        await this.loadCategories();
-        await this.checkBackup();
+        try {
+            await this.loadSettings();
+        } catch (error) {
+            console.error('Failed to load settings:', error);
+            this.settings = { ...this.defaultSettings };
+        }
+
+        try {
+            await this.loadCategories();
+        } catch (error) {
+            console.error('Failed to load categories:', error);
+            this.categories = [...this.defaultCategories];
+        }
+
+        try {
+            await this.checkBackup();
+        } catch (error) {
+            console.error('Backup check failed:', error);
+        }
     },
 
     /**
@@ -164,7 +180,45 @@ const DataStore = {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
+
+            // AUTO-COPY LOGIC: Check previous month for templates
+            let prevYear = year;
+            let prevMonth = month - 1;
+            if (prevMonth === 0) {
+                prevMonth = 12;
+                prevYear -= 1;
+            }
+            const prevMonthId = this.getMonthId(prevYear, prevMonth);
+            const prevData = await window.api.readFile(`months/${prevMonthId}.json`);
+
+            let copiedCount = 0;
+            if (prevData && prevData.expenses) {
+                const templates = prevData.expenses.filter(e => e.isTemplate);
+                for (const t of templates) {
+                    this.currentMonth.expenses.push({
+                        id: generateId(),
+                        categoryId: t.categoryId,
+                        description: t.description, // Keep description
+                        plannedAmount: 0, // Reset amount to 0 (displays as "-")
+                        plannedDate: t.plannedDate, // Keep date
+                        paidAmount: null,
+                        paidDate: null,
+                        isTemplate: true, // Keep checked
+                        specialType: t.specialType || null,
+                        userDateOverride: t.userDateOverride || false
+                    });
+                    copiedCount++;
+                }
+            }
+
             await this.saveMonth();
+
+            if (copiedCount > 0) {
+                // Defer toast slightly to ensure UI is ready or just fire it
+                setTimeout(() => {
+                    showToast(`${copiedCount} despesas recorrentes copiadas. Por favor preencha o valor.`, 'info', 5000);
+                }, 1000);
+            }
         }
 
         // Load holidays for this year
@@ -242,6 +296,7 @@ const DataStore = {
             id: generateId(),
             description: income.description,
             plannedAmount: income.plannedAmount,
+            plannedDate: income.plannedDate,
             receivedAmount: income.receivedAmount || null,
             receivedDate: income.receivedDate || null
         };
@@ -434,6 +489,10 @@ const DataStore = {
     /**
      * Calculates totals for the current month
      */
+    /**
+     * Calculates totals for the current month up to the present date
+     * (Matching the logic of the Cumulative Cash Flow Chart)
+     */
     calculateTotals() {
         if (!this.currentMonth || !this.settings) return null;
 
@@ -447,22 +506,6 @@ const DataStore = {
             accumulatedFines: 0
         };
 
-        // Calculate expenses
-        for (const expense of this.currentMonth.expenses) {
-            if (expense.plannedDate !== 0) { // Exclude future reminders (day 0)
-                const planned = expense.plannedAmount || 0;
-                const paid = expense.paidAmount || 0;
-
-                totals.plannedExpenses += planned;
-                totals.paidExpenses += paid;
-
-                // Fines/Interest is the difference when paid > planned
-                if (paid > planned) {
-                    totals.accumulatedFines += (paid - planned);
-                }
-            }
-        }
-
         const now = new Date();
         const { year, month } = this.currentMonth;
         const daysInMonth = getDaysInMonth(year, month);
@@ -474,74 +517,113 @@ const DataStore = {
         if (isPastMonth) {
             calculationEndDay = daysInMonth;
         } else if (isFutureMonth) {
+            calculationEndDay = 0; // Future months start at 0? Or should show nothing? 
+            // If user wants to see projection, maybe whole month? 
+            // "Up to present date" implies 0 for future. But usually people want to see the plan for future.
+            // Charts usually show the curve building up.
+            // Requirement: "accumulated totals up to the present date the app is running".
+            // Strictly interpretted: Future month = Day 0 (start). But maybe "Present Date" relative to month view?
+            // Usually "Present Date" means Today.
+            // If I am in Next Month, "Today" is before Day 1. So 0.
             calculationEndDay = 0;
         } else {
             calculationEndDay = now.getDate();
         }
 
-        // Calculate income
+        // 1. EXPENSES (Use getExpensesByDay to match Chart placement)
+        const expensesByDay = this.getExpensesByDay();
+
+        // Accumulate up to calculationEndDay
+        // Limit calculationEndDay to daysInMonth just in case
+        const safeEndDay = Math.min(calculationEndDay, daysInMonth);
+
+        for (let d = 1; d <= safeEndDay; d++) {
+            if (expensesByDay[d]) {
+                totals.plannedExpenses += expensesByDay[d].totalPlanned || 0;
+                totals.paidExpenses += expensesByDay[d].totalPaid || 0;
+            }
+        }
+
+        // Fines (calculated from raw list because 'totalPaid' in daily bucket doesn't separate fines)
+        // But fines should also be "up to today"? 
+        // Let's iterate expenses again and check "paidDate" <= calculationEndDay maybe?
+        // Or just keep total accumulated fines as a global metric? Simple is better.
+        // Actually, let's stick to the Chart alignment. Charts don't show fines explicitly.
+        // But for Summary: "accumulated figures... up to present date".
+        // Let's recalculate fines strictly.
+        for (const expense of this.currentMonth.expenses) {
+            if (expense.paidAmount > expense.plannedAmount && expense.paidDate) {
+                // Check if paid date is within range
+                // Simplification: if paidDate is day number
+                const pDay = parseInt(expense.paidDate);
+                if (!isNaN(pDay) && pDay <= safeEndDay) {
+                    totals.accumulatedFines += (expense.paidAmount - expense.plannedAmount);
+                }
+            }
+        }
+
+
+        // 2. INCOME (Planned) - Reusing logic but simpler loop
         const recurringIncomes = this.currentMonth.incomes.filter(i => {
             const dateStr = String(i.plannedDate || '').toUpperCase();
             return dateStr === 'ALL' || dateStr === '';
         });
-        const datedIncomes = this.currentMonth.incomes.filter(i => {
-            const dateStr = String(i.plannedDate || '').toUpperCase();
-            return dateStr !== 'ALL' && dateStr !== '';
-        });
+        const dailyRecurringBase = recurringIncomes.reduce((sum, i) => sum + (i.plannedAmount || 0), 0);
 
-        const sumAll = recurringIncomes.reduce((sum, i) => sum + (i.plannedAmount || 0), 0);
+        // Iterate days to apply weights (Sat/Sun/Holiday)
+        const satWeight = (this.settings.saturdayIncomePercentage ?? 50) / 100;
+        const sunWeight = (this.settings.sundayIncomePercentage ?? 50) / 100;
+        const holidayFactor = (this.settings.holidayIncomePercentage ?? 0) / 100;
 
-        // Factors for Sat/Sun
-        const satFactor = Number(this.settings.saturdayIncomePercentage ?? 50) / 100;
-        const sunFactor = Number(this.settings.sundayIncomePercentage ?? 50) / 100;
-        const holidayPercentage = Number(this.settings.holidayIncomePercentage ?? 0); // Default 0 to avoid "all" assumption if logic missing
-        const holidayFactor = holidayPercentage / 100;
+        let bucket = 0;
 
-        let totalContributionDays = 0;
+        // Income By Day calculation (Distribution) - Similar to Income.getDailyDistribution but optimized for sum
+        for (let d = 1; d <= daysInMonth; d++) {
+            // Calculate Planned First
+            if (dailyRecurringBase > 0) {
+                const date = new Date(year, month - 1, d);
+                const dayOfWeek = date.getDay();
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const isHoliday = this.holidays.includes(dateStr);
 
-        for (let d = 1; d <= calculationEndDay; d++) {
-            const date = new Date(year, month - 1, d);
-            const dayOfWeek = date.getDay(); // 0 = Sun, 6 = Sat
-            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            const isHoliday = this.holidays.includes(dateStr);
+                let generated = 0;
+                if (isHoliday) generated = dailyRecurringBase * holidayFactor;
+                else if (dayOfWeek === 6) generated = dailyRecurringBase * satWeight;
+                else if (dayOfWeek === 0) generated = dailyRecurringBase * sunWeight;
+                else generated = dailyRecurringBase;
 
-            if (isHoliday) {
-                // Holidays generate "ALL" revenue adjusted by the factor (1 - reduction)
-                totalContributionDays += holidayFactor;
-                continue;
-            }
-
-            if (dayOfWeek === 0) { // Sunday
-                totalContributionDays += sunFactor;
-            } else if (dayOfWeek === 6) { // Saturday
-                totalContributionDays += satFactor;
-            } else { // Working day
-                totalContributionDays += 1;
+                if (isHoliday || dayOfWeek === 6 || dayOfWeek === 0) {
+                    bucket += generated;
+                } else {
+                    const totalDayInc = generated + bucket;
+                    bucket = 0;
+                    if (d <= safeEndDay) totals.plannedIncome += totalDayInc;
+                }
             }
         }
 
-        // Dynamic planned income for recurring part
-        const recurringExpected = sumAll * totalContributionDays;
+        // Add Dated Incomes (Specific Day) - Filter by Effective Date
+        const datedIncomes = this.currentMonth.incomes.filter(i => {
+            const ds = String(i.plannedDate || '').toUpperCase();
+            return ds !== 'ALL' && ds !== '';
+        });
 
-        // Planned income for dated part (only if day is <= calculationEndDay)
-        // AND considering effective day (next working day rules)
-        const datedPlanned = datedIncomes
-            .filter(i => {
-                const day = parseInt(i.plannedDate);
-                if (isNaN(day)) return false;
-
-                // Get effective date (moved to next business day if weekend/holiday)
+        for (const inc of datedIncomes) {
+            const day = Number(inc.plannedDate);
+            if (!isNaN(day)) {
                 const effectiveDay = getNextWorkingDay(year, month, day, this.holidays);
+                if (effectiveDay <= safeEndDay) {
+                    totals.plannedIncome += (inc.plannedAmount || 0);
+                }
+            }
+        }
 
-                return effectiveDay <= calculationEndDay;
-            })
-            .reduce((sum, i) => sum + (i.plannedAmount || 0), 0);
-
-        totals.plannedIncome = recurringExpected + datedPlanned;
-
-        // Base zero received income (daily entries only)
-        totals.receivedIncome = Object.values(this.currentMonth.dailyActualIncome || {})
-            .reduce((sum, amount) => sum + (amount || 0), 0);
+        // 3. EFFECTIVE INCOME (Grid Only - Rule 1.2)
+        // Sum Grid values up to safeEndDay
+        const dailyActuals = this.currentMonth.dailyActualIncome || {};
+        for (let d = 1; d <= safeEndDay; d++) {
+            totals.receivedIncome += (dailyActuals[d] || 0);
+        }
 
         // Calculate balances
         totals.plannedBalance = totals.plannedIncome - totals.plannedExpenses;
@@ -630,3 +712,5 @@ const DataStore = {
         return byDay;
     }
 };
+
+window.DataStore = DataStore;

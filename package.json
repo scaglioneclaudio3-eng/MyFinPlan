@@ -7,7 +7,8 @@
     "start": "cmd /c \"(set ELECTRON_RUN_AS_NODE=) & electron .\"",
     "start:unix": "unset ELECTRON_RUN_AS_NODE && electron .",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "electron-builder --win",
+    "create-shortcut": "powershell -ExecutionPolicy Bypass -File create_shortcut.ps1",
+    "build": "electron-builder --win && npm run create-shortcut",
     "build:publish": "electron-builder --win --publish always"
   },
   "keywords": [
@@ -24,7 +25,7 @@
   },
   "devDependencies": {
     "electron": "^31.7.5",
-    "electron-builder": "^26.4.0"
+    "electron-builder": "^24.13.3"
   },
   "build": {
     "appId": "com.myfinplan.app",

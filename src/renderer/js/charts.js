@@ -175,18 +175,14 @@ const Charts = {
         let cumReceivedInc = 0;
 
         // Pre-calculate received income by day
-        const incomes = DataStore.currentMonth.incomes || [];
+        // Pre-calculate received income by day
+        // Rule 1.2: Effective Cash Flow considers ONLY "effective incomes inserted in the daily effective income grid"
+        // We do NOT sum individual income entries relative to planned incomes here, 
+        // because the user manually enters the *total* actual cash in the grid.
         const dailyActuals = DataStore.currentMonth.dailyActualIncome || {};
         const receivedByDay = {};
 
-        // Add received amounts from dated income objects
-        for (const inc of incomes) {
-            if (inc.receivedAmount > 0 && inc.receivedDate) {
-                receivedByDay[inc.receivedDate] = (receivedByDay[inc.receivedDate] || 0) + inc.receivedAmount;
-            }
-        }
-
-        // Add amounts from the daily actual income grid
+        // Add amounts ONLY from the daily actual income grid
         for (const day in dailyActuals) {
             receivedByDay[day] = (receivedByDay[day] || 0) + (dailyActuals[day] || 0);
         }
@@ -314,3 +310,5 @@ const Charts = {
         // Charts are rendered when view is switched
     }
 };
+
+window.Charts = Charts;

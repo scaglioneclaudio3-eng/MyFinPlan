@@ -145,25 +145,63 @@ const Categories = {
             let statusClass = '';
             let statusText = '-';
 
-            // Use effectiveDay for logic (but keep plannedDate > 0 check to exclude separate reminders if desired, 
-            // logically reminder is plannedDate === 0, so effectiveDay check handles > 0 implicitly if we want same behavior)
-            // Wait, reminder is 0. -1 is first working day.
-            // If expense.plannedDate is 0, effectiveDay remains 0.
+            // Compare full dates to handle month/year transitions correctly
+            const now = new Date();
+            // Create dates at midnight for accurate comparison
+            const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const expenseDate = new Date(year, month - 1, effectiveDay);
 
-            if (effectiveDay > 0 && effectiveDay <= today) {
+            if (effectiveDay > 0 && expenseDate <= todayDate) {
                 if (percentage >= 100) {
-                    statusClass = 'paid';
-                    statusText = '100%';
+                    // Check if late payment (paidDate > effectiveDate)
+                    let isLate = false;
+                    if (expense.paidDate) {
+                        let paidDay = -1;
+                        let paidMonth = -1;
+                        let paidYear = year;
+
+                        if (typeof expense.paidDate === 'string' && expense.paidDate.includes('/')) {
+                            const parts = expense.paidDate.split('/');
+                            paidDay = parseInt(parts[0]);
+                            paidMonth = parseInt(parts[1]);
+
+                            if (paidMonth < month && year === todayDate.getFullYear() - 1) {
+                                paidYear = year + 1;
+                            }
+                        } else {
+                            paidDay = parseInt(expense.paidDate);
+                            paidMonth = month;
+                        }
+
+                        const paidDateObj = new Date(paidYear, paidMonth - 1, paidDay);
+
+                        if (paidDateObj > expenseDate) {
+                            isLate = true;
+                        }
+                    }
+
+                    if (isLate) {
+                        statusClass = 'partial'; // Yellow for late full payment
+                        statusText = '100%';
+                    } else {
+                        statusClass = 'paid'; // Green for on-time full payment
+                        statusText = '100%';
+                    }
                 } else if (percentage > 0) {
-                    statusClass = 'partial';
+                    statusClass = 'partial'; // Yellow for partial
                     statusText = `${percentage}%`;
                 } else {
-                    statusClass = 'overdue';
+                    statusClass = 'overdue'; // Red for unpaid overdue
                     statusText = '0%';
                 }
             } else if (expense.paidAmount > 0) {
-                statusClass = 'paid';
-                statusText = `${percentage}%`;
+                if (percentage >= 100) {
+                    statusClass = 'paid';
+                    statusText = '100%';
+                } else {
+                    statusClass = 'partial';
+                    statusText = `${percentage}%`;
+                }
             }
 
             // Prefix description for future expenses
@@ -174,7 +212,7 @@ const Categories = {
             html += `
                 <tr data-expense-id="${expense.id}" data-category-id="${category.id}">
                     <td>${descriptionDisplay}</td>
-                    <td class="amount">${formatCurrency(expense.plannedAmount)}</td>
+                    <td class="amount">${(expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-'}</td>
                     <td class="date">${expense.plannedDate === 0 ? 'Futuro' : expense.plannedDate}</td>
                     <td class="amount">${expense.paidAmount ? formatCurrency(expense.paidAmount) : '-'}</td>
                     <td class="date">${expense.paidDate || '-'}</td>
@@ -205,7 +243,7 @@ const Categories = {
             ? `Tem certeza que deseja excluir a categoria "${category.name}"? ${expenseCount} despesa(s) serão movidas para "Sem Categoria".`
             : `Tem certeza que deseja excluir a categoria "${category.name}"?`;
 
-        if (confirm(message)) {
+        if (await window.api.showConfirm(message)) {
             await DataStore.deleteCategory(category.id);
             this.render();
             showToast('Categoria excluída', 'success');
@@ -241,3 +279,5 @@ const Categories = {
         });
     }
 };
+
+window.Categories = Categories;

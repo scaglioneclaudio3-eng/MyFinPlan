@@ -1,0 +1,35 @@
+1. Adicionando Despesas
+Clique no botão + ao lado de uma categoria para adicionar uma nova despesa. Preencha a descrição, valor previsto e dia de vencimento.
+
+2. Datas Especiais
+- Dia -1: Pagamentos atrasados do mês anterior
+- Dia 0: Lembretes de despesas futuras
+- Dia 1-31: Data normal de vencimento
+
+3. Registrando Pagamentos
+Clique em uma despesa para editar e informar o valor pago e a data do pagamento.
+
+4. Visualizações
+Use as abas no topo para alternar entre Lançamentos, Calendário e Gráficos.
+
+5. Copiando Meses
+Use o menu Editar → Copiar Mês para copiar despesas de um mês para outro.
+
+6. Detalhes do Calendário
+No calendário clique em um dia para visualizar em detalhes as atividades financeiras e os correspondentes resumos do dia.
+
+7. Regras de Receitas em Fins de Semana e Feriados
+Receitas previstas e efetivas em fins de semana e feriados são inseridas pelo App no primeiro subsequente dia útil.
+
+8. Receitas Previstas Recorrentes (ALL)
+Receitas previstas definidas com dia "all" são médias previstas pelo usuário e se aplicam a todos os dias do mês, e sábados, domingos e feriados seguem porcentagens dessas receitas, conforme o especificado em configurações.
+
+9. Renda Efetiva Diária
+No final da página de Lançamentos, há uma grade com todos os dias do mês. Digite aqui o valor que efetivamente entrou em conta em cada dia. Estes campos possuem fundo azul.
+
+10. Configurações
+No menu Configurações você pode ajustar:
+a) porcentagem de renda recebida em fins de semana;
+b) transferência automática para o primeiro dia útil subsequente;
+c) localização para feriados;
+d) frequência de backup.

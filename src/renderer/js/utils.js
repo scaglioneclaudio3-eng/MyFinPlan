@@ -327,3 +327,20 @@ function isPossibleTypo(value, average, threshold = 10) {
     if (average === 0) return false;
     return value > average * threshold;
 }
+
+window.formatCurrency = formatCurrency;
+window.parseCurrency = parseCurrency;
+window.getDaysInMonth = getDaysInMonth;
+window.getFirstDayOfMonth = getFirstDayOfMonth;
+window.isWeekend = isWeekend;
+window.getWeekdayName = getWeekdayName;
+window.getMonthName = getMonthName;
+window.generateId = generateId;
+window.getNextWorkingDay = getNextWorkingDay;
+window.getPreviousWorkingDay = getPreviousWorkingDay;
+window.getFifthWorkingDay = getFifthWorkingDay;
+window.getShiftedWorkingDay = getShiftedWorkingDay;
+window.getEffectiveDate = getEffectiveDate;
+window.showToast = showToast;
+window.debounce = debounce;
+window.isPossibleTypo = isPossibleTypo;

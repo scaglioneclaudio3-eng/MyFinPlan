@@ -48,6 +48,30 @@ const Income = {
             const item = document.createElement('div');
             item.className = 'daily-income-item';
 
+            // Determine special statuses
+            const dateObj = new Date(year, month - 1, d);
+            const dayOfWeek = dateObj.getDay();
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+            // Check for Holiday
+            if (DataStore.holidays && DataStore.holidays.includes(dateStr)) {
+                item.classList.add('is-holiday');
+            }
+
+            // Check for Weekend
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                item.classList.add('is-weekend');
+            }
+
+            // Calculate Grid Column (Standard Calendar: Sun=1, Sat=7)
+            item.style.gridColumnStart = dayOfWeek + 1;
+
+            // Check for Today
+            const now = new Date();
+            if (now.getDate() === d && now.getMonth() === (month - 1) && now.getFullYear() === year) {
+                item.classList.add('is-today');
+            }
+
             const rawValue = dailyActuals[d];
             // Format if value exists and is not zero, else empty
             let displayValue = '';
@@ -56,7 +80,7 @@ const Income = {
                 displayValue = rawValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
-            const dayOfWeek = new Date(year, month - 1, d).getDay();
+            // const dayOfWeek = new Date(year, month - 1, d).getDay(); // Already calculated above
             const weekdayInitial = getWeekdayName(dayOfWeek).charAt(0);
 
             item.innerHTML = `
@@ -89,6 +113,13 @@ const Income = {
                     }
 
                     if (isNaN(newValue) || newValue < 0) newValue = 0;
+
+                    // --- CHECK GLOBAL CONSISTENCY ---
+                    // Rule removed: Daily Actual Income can now be anything, unrestricted.
+                    /* 
+                     * Previous logic enforced: newValue >= declaredSum
+                     * User request: "allow unrestricted entries"
+                     */
 
                     // 1. Update Visuals Immediately (Prioritize User Feedback)
                     if (newValue > 0) {
@@ -155,7 +186,7 @@ const Income = {
 
         card.innerHTML = `
             <div class="income-description">
-                <span style="font-weight:bold; margin-right:8px; color:var(--primary-color);font-size:11px;">[${dateLabel}]</span>
+                <span style="font-weight:bold; margin-right:8px; color:#ADD8E6;font-size:11px;">[${dateLabel}]</span>
                 ${income.description}
             </div>
             <div class="income-amounts">
@@ -300,7 +331,7 @@ const Income = {
 
             let isFuture = false;
 
-            if (income.receivedDate !== null && income.receivedDate !== undefined) {
+            if (income.receivedDate !== null && income.receivedDate !== undefined && !isNaN(parseInt(income.receivedDate))) {
                 const day = parseInt(income.receivedDate);
                 const daysInMonth = getDaysInMonth(year, month);
                 if (isNaN(day) || day < 1 || day > daysInMonth) {
@@ -309,13 +340,25 @@ const Income = {
                     isFuture = true;
                 }
             } else {
+                // Received Date is MISSING
+                if (income.plannedDate !== 'ALL') {
+                    // It is mandatory for specific-date incomes
+                    errors.push('Data do Recebimento é obrigatória para receitas pontuais com valor recebido.');
+                }
+
+                // If it was 'ALL', we wouldn't be here ideally because fields are blocked, 
+                // but if we are, we don't strictly enforce date because it's average, 
+                // OR we enforce that it shouldn't be here. 
+                // But the requirement says "No caso caso de receita recebida relativa a uma receita esperada pontual... o app deve também requisitar a entrada da data".
+
+                // Also check future for "missing date" implies "today" or generally checks month
                 if (year > currentYear || (year === currentYear && month > currentMonth)) {
                     isFuture = true;
                 }
             }
 
             if (isFuture) {
-                errors.push('não é possível inserir valores efetivos em dias futuros');
+                errors.push('Não é possível inserir valores efetivos em dias futuros');
             }
         }
 
@@ -334,3 +377,5 @@ const Income = {
         });
     }
 };
+
+window.Income = Income;

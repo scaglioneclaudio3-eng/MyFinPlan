@@ -108,6 +108,10 @@ const Expenses = {
             errors.push('Valor pago não pode ser negativo');
         }
 
+        if (expense.paidAmount > 0 && (!expense.paidDate || expense.paidDate.toString().trim() === '')) {
+            errors.push('Data de pagamento é obrigatória quando há valor pago');
+        }
+
         // Paid date validation
         if (expense.paidAmount > 0) {
             const now = new Date();
@@ -140,8 +144,9 @@ const Expenses = {
                     const daysInMonth = getDaysInMonth(year, month);
                     if (isNaN(day) || day < 1 || day > daysInMonth) {
                         errors.push(`Dia de pagamento inválido. Para este mês, deve ser entre 1 e ${daysInMonth}.`);
-                    } else if (year > currentYear || (year === currentYear && month > currentMonth) || (year === currentYear && month === currentMonth && day > today)) {
-                        isFuture = true;
+                        if (year > currentYear || (year === currentYear && month > currentMonth) || (year === currentYear && month === currentMonth && day > today)) {
+                            isFuture = true;
+                        }
                     }
                 }
             } else {
@@ -156,6 +161,11 @@ const Expenses = {
             if (isFuture) {
                 errors.push('não é possível inserir valores efetivos em dias futuros');
             }
+        }
+
+        // New Check: Date present but no amount
+        if ((expense.paidDate && expense.paidDate.toString().trim() !== '') && (expense.paidAmount === null || expense.paidAmount <= 0)) {
+            errors.push('Valor pago é obrigatório quando há data de pagamento');
         }
 
         // Warnings
@@ -199,3 +209,5 @@ const Expenses = {
         */
     }
 };
+
+window.Expenses = Expenses;

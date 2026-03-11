@@ -82,6 +82,10 @@ const Modals = {
 
         if (expense) {
             title.textContent = 'Editar Despesa';
+            document.getElementById('expense-description').readOnly = false;
+            document.getElementById('expense-planned-amount').readOnly = false;
+            document.getElementById('expense-planned-date').readOnly = false;
+
             document.getElementById('expense-description').value = expense.description || '';
             document.getElementById('expense-planned-amount').value = expense.plannedAmount || '';
             document.getElementById('expense-planned-date').value = expense.plannedDate ?? '';
@@ -99,59 +103,125 @@ const Modals = {
 
         document.getElementById('expense-description').focus();
 
-        // Initialize blocking state based on planned date
-        const initialPlannedDate = expense ? expense.plannedDate : (document.getElementById('expense-planned-date').value || '');
-        this.toggleExpenseBlocking(initialPlannedDate);
+        // Initialize blocking state
+        this.toggleExpenseBlocking();
     },
 
     /**
      * Toggles blocking of payment fields based on planned date (0 = future reminder)
      * @param {string|number} plannedDateValue - The value of the planned date input
      */
-    toggleExpenseBlocking(plannedDateValue) {
+    toggleExpenseBlocking() {
+        // Rule 3: Paid fields depend on Planned fields
+        const plannedAmountInput = document.getElementById('expense-planned-amount');
+        const plannedDateInput = document.getElementById('expense-planned-date');
         const paidAmountInput = document.getElementById('expense-paid-amount');
         const paidDateInput = document.getElementById('expense-paid-date');
 
-        // Check if value is 0 (accounting for string "0" or number 0)
-        // Ensure it's not just part of "10" or "20", so exact match "0" if string.
+        const plannedAmount = parseFloat(plannedAmountInput.value) || 0;
+        const plannedDateValue = plannedDateInput.value;
+
+        // Check conditions
+        const hasPlannedAmount = plannedAmount > 0;
+        // Date is required. Value '0' is allowed (future reminder) but handling changed.
+        // Rule 3 says "respectivo campo de despesa planejada... deve estar previamente preenchido".
+        // It implies amount and date.
+        const hasPlannedDate = plannedDateValue !== '' && plannedDateValue !== null;
+
+        // Special case: Future Reminder (Day 0) logic merge
+        // If plannedDate is 0, we treat it as "Future", often blocking payment.
         const isFutureReminder = parseInt(plannedDateValue) === 0;
 
-        const showBlockAlert = () => {
-            alert('Valor e dia de pagamento neste mês para despesa futura (lembrete) não são permitidos');
-        };
+        let shouldEnablePaid = hasPlannedAmount && hasPlannedDate;
 
         if (isFutureReminder) {
-            // Block fields
-            paidAmountInput.readOnly = true;
-            paidDateInput.readOnly = true;
+            shouldEnablePaid = false; // Future reminders cannot be paid yet
+        }
 
-            // Add click listener for alert
-            paidAmountInput.onclick = showBlockAlert;
-            paidDateInput.onclick = showBlockAlert;
+        // Apply state
+        if (!shouldEnablePaid) {
+            paidAmountInput.disabled = true;
+            paidDateInput.disabled = true;
 
-            // Visual cue
-            paidAmountInput.style.backgroundColor = '#f0f0f0';
-            paidDateInput.style.backgroundColor = '#f0f0f0';
+            // Set titles for explanation
+            if (isFutureReminder) {
+                const msg = 'Indisponível para lembretes futuros';
+                paidAmountInput.title = msg;
+                paidDateInput.title = msg;
+            } else {
+                const msg = 'Preencha o valor e data previstos primeiro';
+                paidAmountInput.title = msg;
+                paidDateInput.title = msg;
+            }
 
-            paidAmountInput.title = 'Indisponível para lembretes futuros';
-            paidDateInput.title = 'Indisponível para lembretes futuros';
+            // Clear values if dependent parents are invalid?
+            // User rules don't strictly say clear, but if it effectively disables, 
+            // the form submit logic shouldn't read them or they should be empty.
+            // Current "Income" logic clears/hides. Let's keep them visible but disabled (standard).
+            // But if user clears planned amount, having an orphaned paid amount is weird.
+            // Let's stick to just disabling for now to allow correction if accidental clearing.
         } else {
-            // Unblock fields
-            paidAmountInput.readOnly = false;
-            paidDateInput.readOnly = false;
-
-            paidAmountInput.onclick = null;
-            paidDateInput.onclick = null;
-
-            paidAmountInput.style.backgroundColor = '';
-            paidDateInput.style.backgroundColor = '';
-
+            paidAmountInput.disabled = false;
+            paidDateInput.disabled = false;
             paidAmountInput.title = '';
             paidDateInput.title = '';
         }
+
+        // Remove old style/events logic (cleaned up by replacement)
     },
 
 
+
+    toggleIncomeBlocking(plannedDateValue) {
+        const receivedAmountInput = document.getElementById('income-received-amount');
+        const receivedDateInput = document.getElementById('income-received-date');
+        const plannedAmountInput = document.getElementById('income-planned-amount');
+
+        // Normalize checking: "ALL" is case-insensitive
+        const plannedDateStr = (plannedDateValue || '').toString().trim().toUpperCase();
+        const isAll = plannedDateStr === 'ALL';
+
+        // Helper for float parsing with comma support
+        const parseAmount = (val) => {
+            if (!val) return 0;
+            // Robust parsing: remove dots (thousands), replace comma (decimal)
+            return parseFloat(val.replace(/\./g, '').replace(',', '.'));
+        };
+
+        // 1. Check Planned Validity
+        const plannedAmountVal = parseAmount(plannedAmountInput.value);
+        const hasPlannedAmount = plannedAmountVal > 0;
+        const hasSpecificPlannedDate = plannedDateStr !== '' && !isAll;
+
+        // 2. Check Received Amount Validity
+        const receivedAmountVal = parseAmount(receivedAmountInput.value);
+        const hasReceivedAmount = receivedAmountVal > 0;
+
+        // Determine States
+        // Received Amount is unblocked if Planned is Valid
+        const shouldEnableAmount = hasPlannedAmount && hasSpecificPlannedDate;
+
+        // Received Date is unblocked if Amount is unblocked AND has a value
+        const shouldEnableDate = shouldEnableAmount && hasReceivedAmount;
+
+        // --- APPLY TO RECEIVED AMOUNT ---
+        if (!shouldEnableAmount) {
+            receivedAmountInput.disabled = true;
+            receivedAmountInput.title = 'Preencha a receita prevista e uma data específica primeiro.';
+        } else {
+            receivedAmountInput.disabled = false;
+            receivedAmountInput.title = '';
+        }
+
+        // --- APPLY TO RECEIVED DATE ---
+        if (!shouldEnableDate) {
+            receivedDateInput.disabled = true;
+            receivedDateInput.title = 'Preencha o valor recebido primeiro.';
+        } else {
+            receivedDateInput.disabled = false;
+            receivedDateInput.title = '';
+        }
+    },
 
     /**
      * Opens the Income modal
@@ -164,19 +234,39 @@ const Modals = {
         document.getElementById('income-modal-title').textContent = income ? 'Editar Receita' : 'Nova Receita';
         document.getElementById('delete-income-btn').style.display = income ? 'block' : 'none';
 
+        // Prepare initial values
+        let plannedDateVal = 'ALL';
+
         if (income) {
             document.getElementById('income-id').value = income.id;
+            document.getElementById('income-description').readOnly = false;
             document.getElementById('income-description').value = income.description;
-            document.getElementById('income-planned-amount').value = income.plannedAmount;
+
+            // Format numbers for text input (comma as decimal)
+            const formatForInput = (val) => {
+                if (val === null || val === undefined) return '';
+                // Ensure it's a number string with comma for decimal
+                return val.toString().replace('.', ',');
+            };
+
+            document.getElementById('income-planned-amount').value = formatForInput(income.plannedAmount);
             document.getElementById('income-planned-date').value = income.plannedDate;
-            document.getElementById('income-received-amount').value = income.receivedAmount || '';
+
+            // Values for received might be overwritten by blocking logic if date is ALL
+            document.getElementById('income-received-amount').value = formatForInput(income.receivedAmount);
             document.getElementById('income-received-date').value = income.receivedDate || '';
+
+            plannedDateVal = income.plannedDate;
         } else {
-            document.getElementById('income-planned-date').value = 'ALL'; // Default for new income
+            document.getElementById('income-planned-date').value = ''; // Default for new income (empty allows editing)
+            plannedDateVal = '';
         }
 
         this.open('income-modal');
         document.getElementById('income-description').focus();
+
+        // Apply blocking logic immediately
+        this.toggleIncomeBlocking(plannedDateVal);
     },
 
     /**
@@ -197,10 +287,6 @@ const Modals = {
         this.open('settings-modal');
     },
 
-    /**
-     * Opens the daily income details modal
-     * @param {number} day - The day of the month
-     */
     /**
      * Opens the daily income details modal
      * @param {number} day - The day of the month
@@ -379,9 +465,77 @@ const Modals = {
             Categories.render();
         });
 
-        // Listen for changes in planned date to toggle blocking
-        document.getElementById('expense-planned-date').addEventListener('input', (e) => {
-            this.toggleExpenseBlocking(e.target.value);
+        // Listen for changes in planned date AND amount to toggle blocking
+        document.getElementById('expense-planned-date').addEventListener('input', () => {
+            this.toggleExpenseBlocking();
+        });
+        document.getElementById('expense-planned-amount').addEventListener('input', () => {
+            this.toggleExpenseBlocking();
+        });
+
+        // Listen for changes in income planned date to toggle blocking
+        // Listen for changes in income planned date to toggle blocking
+        document.getElementById('income-planned-date').addEventListener('input', (e) => {
+            this.toggleIncomeBlocking(e.target.value);
+        });
+
+        // Listen for changes in income planned amount to toggle blocking
+        document.getElementById('income-planned-amount').addEventListener('input', (e) => {
+            // We need to pass the current date value to the toggle function
+            const dateValue = document.getElementById('income-planned-date').value;
+            this.toggleIncomeBlocking(dateValue);
+        });
+
+        // Listen for changes in income received amount to toggle blocking (for date field)
+        document.getElementById('income-received-amount').addEventListener('input', (e) => {
+            const dateValue = document.getElementById('income-planned-date').value;
+            this.toggleIncomeBlocking(dateValue);
+        });
+
+        // --- Enter Key Validation Listeners for Income ---
+
+        // 1. Planned Amount -> Check Date
+        document.getElementById('income-planned-amount').addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent submit if needed, or just validate
+                if (e.target.value && !document.getElementById('income-planned-date').value) {
+                    await window.api.showMessage('por favor insira a data', 'warning');
+                    document.getElementById('income-planned-date').focus();
+                }
+            }
+        });
+
+        // 2. Planned Date -> Check Amount
+        document.getElementById('income-planned-date').addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.target.value && !document.getElementById('income-planned-amount').value) {
+                    await window.api.showMessage('por favor insira a receita', 'warning');
+                    document.getElementById('income-planned-amount').focus();
+                }
+            }
+        });
+
+        // 3. Received Amount -> Check Date
+        document.getElementById('income-received-amount').addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.target.value && !document.getElementById('income-received-date').value) {
+                    await window.api.showMessage('por favor insira a data', 'warning');
+                    document.getElementById('income-received-date').focus();
+                }
+            }
+        });
+
+        // 4. Received Date -> Check Amount
+        document.getElementById('income-received-date').addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.target.value && !document.getElementById('income-received-amount').value) {
+                    await window.api.showMessage('por favor insira a receita', 'warning');
+                    document.getElementById('income-received-amount').focus();
+                }
+            }
         });
 
         // Expense form submission
@@ -444,7 +598,7 @@ const Modals = {
         // Delete expense button
         document.getElementById('delete-expense-btn').addEventListener('click', async () => {
             const expenseId = document.getElementById('expense-id').value;
-            if (expenseId && confirm('Tem certeza que deseja excluir esta despesa?')) {
+            if (expenseId && await window.api.showConfirm('Tem certeza que deseja excluir esta despesa?')) {
                 await DataStore.deleteExpense(expenseId);
                 showToast('Despesa excluída', 'success');
                 this.closeAll();
@@ -461,32 +615,103 @@ const Modals = {
             const plannedDateInput = document.getElementById('income-planned-date').value.trim().toUpperCase();
             let plannedDate = 'ALL';
 
-            if (plannedDateInput !== 'ALL') {
+            if (plannedDateInput === 'ALL') {
+                plannedDate = 'ALL';
+            } else {
                 const day = parseInt(plannedDateInput);
-                if (!isNaN(day)) {
+                const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
+
+                if (!isNaN(day) && day >= 1 && day <= daysInMonth) {
                     plannedDate = day;
+                } else if (document.getElementById('income-planned-date').value.trim() === '') {
+                    // Allow empty during intermediate editing
+                    plannedDate = null;
                 } else {
-                    // Start with ALL if invalid, validation will catch it if strictness is needed, 
-                    // or let it pass as ALL if that's the fallback. 
-                    // Spec says: "default ... to ALL". 
-                    // Actually, if user types garbage, we should probably warn or default.
-                    // Let's assume input text "ALL" or number.
-                    plannedDate = 'ALL';
+                    showToast(`Dia previsto inválido. Digite "ALL" ou um dia entre 1 e ${daysInMonth}.`, 'error');
+                    return;
+                }
+            }
+
+            const description = document.getElementById('income-description').value.trim();
+
+            // Helper parsing for text inputs
+            const parseAmount = (val) => {
+                if (!val) return NaN;
+                // Robust parsing: remove dots (thousands), replace comma (decimal)
+                return parseFloat(val.replace(/\./g, '').replace(',', '.'));
+            };
+
+            const plannedAmountVal = document.getElementById('income-planned-amount').value;
+            const plannedAmount = parseAmount(plannedAmountVal);
+
+            const receivedAmountVal = document.getElementById('income-received-amount').value;
+            const receivedAmount = receivedAmountVal ? parseAmount(receivedAmountVal) : NaN;
+
+            const receivedDateVal = document.getElementById('income-received-date').value;
+            const receivedDate = receivedDateVal ? parseInt(receivedDateVal) : null;
+
+            // --- STRICT VALIDATION RULES ---
+
+            // Rule 1: Planned Amount and Date must form a complete pair
+            const hasPlannedAmount = !isNaN(plannedAmount) && plannedAmount > 0;
+            const hasPlannedDate = plannedDate !== null && plannedDate !== '';
+
+            if ((hasPlannedAmount && !hasPlannedDate) || (!hasPlannedAmount && hasPlannedDate)) {
+                await window.api.showMessage('Não é permitido salvar sem conjuntos completos de receita e data', 'warning');
+                return;
+            }
+
+            // Enforce presence of at least planned data
+            if (!hasPlannedAmount && !hasPlannedDate) {
+                await window.api.showMessage('Por favor insira a receita e a data prevista', 'warning');
+                return;
+            }
+
+            // Rule 2: Received Amount and Date must form a complete pair (if any is entered)
+            const hasReceivedAmount = !isNaN(receivedAmount);
+            const hasReceivedDate = receivedDate !== null && !isNaN(receivedDate);
+
+            if ((hasReceivedAmount && !hasReceivedDate) || (!hasReceivedAmount && hasReceivedDate)) {
+                await window.api.showMessage('Não é permitido salvar sem conjuntos completos de receita e data', 'warning');
+                return;
+            }
+
+            // Rule 3: Cannot have Received Data without Planned Data
+            if ((hasReceivedAmount || hasReceivedDate) && (!hasPlannedAmount || !hasPlannedDate)) {
+                await window.api.showMessage('Não é permitido incluir data ou correspondente receita recebida sem antes completar receita esperada e correspondente data', 'warning');
+                return;
+            }
+
+            // --- Rule 4: Consistency Check with Daily Actual Income ---
+            if (hasReceivedAmount && hasReceivedDate) {
+                const day = receivedDate;
+                // Get the limit (Daily Actual Income for this day)
+                const dailyLimit = DataStore.currentMonth.dailyActualIncome?.[day] || 0;
+
+                // Sum all OTHER incomes for this day
+                const currentIncomeId = document.getElementById('income-id').value;
+                const otherIncomesTotal = DataStore.currentMonth.incomes
+                    .filter(inc => inc.receivedDate === day && inc.id !== currentIncomeId)
+                    .reduce((sum, inc) => sum + (inc.receivedAmount || 0), 0);
+
+                if ((otherIncomesTotal + receivedAmount) > dailyLimit) {
+                    await window.api.showMessage('Erro: receita recebida no painel maior que total recebido no dia', 'error');
+                    return;
                 }
             }
 
             const income = {
-                description: document.getElementById('income-description').value.trim(),
-                plannedAmount: parseFloat(document.getElementById('income-planned-amount').value) || 0,
+                description: description,
+                plannedAmount: plannedAmount || 0,
                 plannedDate: plannedDate,
-                receivedAmount: parseFloat(document.getElementById('income-received-amount').value) || null,
-                receivedDate: parseInt(document.getElementById('income-received-date').value) || null
+                receivedAmount: hasReceivedAmount ? receivedAmount : null,
+                receivedDate: hasReceivedDate ? receivedDate : null
             };
 
             // Validate
             const validation = Income.validate(income);
             if (!validation.valid) {
-                alert(validation.errors[0]);
+                await window.api.showMessage(validation.errors[0], 'warning');
                 return;
             }
 
@@ -508,7 +733,7 @@ const Modals = {
         // Delete income button
         document.getElementById('delete-income-btn').addEventListener('click', async () => {
             const incomeId = document.getElementById('income-id').value;
-            if (incomeId && confirm('Tem certeza que deseja excluir esta receita?')) {
+            if (incomeId && await window.api.showConfirm('Tem certeza que deseja excluir esta receita?')) {
                 await DataStore.deleteIncome(incomeId);
                 showToast('Receita excluída', 'success');
                 this.closeAll();
@@ -570,7 +795,7 @@ const Modals = {
         });
 
         // Daily Income Details logic
-        document.getElementById('add-daily-entry-btn').addEventListener('click', () => {
+        document.getElementById('add-daily-entry-btn').addEventListener('click', async () => {
             const container = document.getElementById('daily-income-entries');
             const rows = container.querySelectorAll('.daily-income-entry-row');
 
@@ -581,7 +806,7 @@ const Modals = {
                 const amount = lastRow.querySelector('.entry-amount').value;
 
                 if (!desc || !amount) {
-                    alert('Adição não permitida antes de completar os campos anteriores');
+                    await window.api.showMessage('Adição não permitida antes de completar os campos anteriores', 'warning');
                     return;
                 }
             }
@@ -631,7 +856,7 @@ const Modals = {
                 showToast(`Renda do dia ${day} atualizada`, 'success');
             } catch (error) {
                 console.error('Erro ao salvar renda diária:', error);
-                alert(`Erro ao salvar: ${error.message || 'Erro desconhecido'}`);
+                await window.api.showMessage(`Erro ao salvar: ${error.message || 'Erro desconhecido'}`, 'error');
                 showToast('Erro ao salvar dados. Tente novamente.', 'error');
             } finally {
                 saveBtn.disabled = false;
@@ -678,12 +903,12 @@ const Modals = {
         // Validate
         const validation = Expenses.validate(data);
         if (!validation.valid) {
-            showToast(validation.errors[0], 'error');
+            await window.api.showMessage(validation.errors[0], 'error');
             return;
         }
 
         if (validation.warnings.length > 0) {
-            if (!confirm(validation.warnings[0] + '\n\nDeseja continuar?')) {
+            if (!await window.api.showConfirm(validation.warnings[0] + '\n\nDeseja continuar?')) {
                 return;
             }
         }
@@ -701,3 +926,5 @@ const Modals = {
         App.updateSummary();
     }
 };
+
+window.Modals = Modals;

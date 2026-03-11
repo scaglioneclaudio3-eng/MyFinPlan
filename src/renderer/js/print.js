@@ -351,3 +351,5 @@ const PrintModule = {
         });
     }
 };
+
+window.PrintModule = PrintModule;

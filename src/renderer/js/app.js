@@ -15,30 +15,116 @@ const App = {
     async init() {
         console.log('Initializing application...');
 
+        // Set up event listeners FIRST to ensure navigation works immediately
+        this.setupEventListeners();
+        this.setupMenuListeners();
+
         // Initialize data store
-        await DataStore.init();
+        try {
+            console.log('Checking DataStore:', typeof DataStore);
+            if (typeof DataStore === 'undefined') {
+                throw new Error('DataStore is undefined. Check if dataStore.js loaded correctly.');
+            }
+            if (typeof generateId === 'undefined') {
+                console.error('generateId is undefined. utils.js failed to load?');
+                window.generateId = () => 'uuid-' + Math.random().toString(36).substr(2, 9); // Fallback
+            }
+
+            await DataStore.init();
+        } catch (error) {
+            console.error('DataStore init failed:', error);
+            try {
+                const debugInfo = {
+                    message: error.message,
+                    stack: error.stack,
+                    dataStoreType: typeof DataStore,
+                    windowApi: typeof window.api
+                };
+                if (window.api && window.api.writeFile) {
+                    await window.api.writeFile('debug_error.json', debugInfo);
+                }
+            } catch (e) {
+                console.error('Failed to write debug file:', e);
+            }
+
+            // VISIBLE ERROR REPORTING
+            document.body.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #1a1d24; color: #fff; font-family: sans-serif; flex-direction: column; text-align: center; padding: 20px;">
+                    <h1 style="color: #dc3545; margin-bottom: 20px;">Erro Crítico ao Inicializar</h1>
+                    <p style="font-size: 18px; margin-bottom: 10px;">O aplicativo não conseguiu carregar os dados.</p>
+                    <p style="color: #aaa; margin-bottom: 30px;">Detalhes: ${error.message}</p>
+                    <div style="background: #2d323c; padding: 15px; border-radius: 6px; text-align: left; max-width: 800px; overflow: auto; margin-bottom: 20px;">
+                        <code style="color: #e8eaed;">${error.stack}</code>
+                    </div>
+                    <button onclick="location.reload()" style="padding: 10px 20px; background: #4a90d9; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 16px;">Tentar Novamente</button>
+                </div>
+            `;
+            return; // Stop initialization
+        }
 
         // Set up year dropdown (3 years range)
         this.setupYearDropdown();
 
-        // Set current month/year in selectors
-        document.getElementById('month-select').value = this.currentMonth;
-        document.getElementById('year-select').value = this.currentYear;
+        const monthSelect = document.getElementById('month-select');
+        const yearSelect = document.getElementById('year-select');
+
+        if (monthSelect) monthSelect.value = this.currentMonth;
+        if (yearSelect) yearSelect.value = this.currentYear;
+
+        // Global error handler for debugging
+        window.onerror = function (message, source, lineno, colno, error) {
+            console.error('Global error:', error);
+            showToast('Erro inesperado: ' + message, 'error');
+            return false;
+        };
+
+        // Initialize modules safely
+        try {
+            Categories.init();
+        } catch (e) { console.error('Categories init failed', e); }
+
+        try {
+            Income.init();
+        } catch (e) { console.error('Income init failed', e); }
+
+        try {
+            Calendar.init();
+        } catch (e) { console.error('Calendar init failed', e); }
+
+        try {
+            Charts.init();
+        } catch (e) { console.error('Charts init failed', e); }
+
+        try {
+            Modals.init();
+        } catch (e) { console.error('Modals init failed', e); }
+
+        try {
+            PrintModule.init();
+        } catch (e) { console.error('PrintModule init failed', e); }
 
         // Load current month data
-        await this.loadMonth(this.currentYear, this.currentMonth);
-
-        // Initialize modules
-        Categories.init();
-        Income.init();
-        Calendar.init();
-        Charts.init();
-        Modals.init();
-        PrintModule.init();
-
-        // Set up event listeners
-        this.setupEventListeners();
-        this.setupMenuListeners();
+        try {
+            await this.loadMonth(this.currentYear, this.currentMonth);
+        } catch (error) {
+            console.error('Failed to load initial month:', error);
+            showToast('Erro ao carregar dados do mês inicial. Iniciando vazio.', 'warning');
+            // Ensure dataStore has basic structure even if load failed
+            if (!DataStore.currentMonth) {
+                const monthId = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}`;
+                DataStore.currentMonth = {
+                    id: monthId,
+                    year: this.currentYear,
+                    month: this.currentMonth,
+                    expenses: [],
+                    incomes: [],
+                    dailyActualIncome: {},
+                    dailyActualIncomeDetails: {},
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+            }
+        }
 
         // Render initial view
         this.renderCurrentView();
@@ -156,27 +242,36 @@ const App = {
      */
     setupEventListeners() {
         // Month navigation
+        // Month navigation
         document.getElementById('prev-month').addEventListener('click', () => {
-            let month = this.currentMonth - 1;
-            let year = this.currentYear;
+            let month = parseInt(this.currentMonth) - 1;
+            let year = parseInt(this.currentYear);
             if (month < 1) {
                 month = 12;
                 year--;
             }
-            document.getElementById('month-select').value = month;
-            document.getElementById('year-select').value = year;
+            // Update dropdowns first to reflect change visually if loadMonth takes time
+            const monthSelect = document.getElementById('month-select');
+            const yearSelect = document.getElementById('year-select');
+            if (monthSelect) monthSelect.value = month;
+            if (yearSelect) yearSelect.value = year;
+
             this.loadMonth(year, month);
         });
 
         document.getElementById('next-month').addEventListener('click', () => {
-            let month = this.currentMonth + 1;
-            let year = this.currentYear;
+            let month = parseInt(this.currentMonth) + 1;
+            let year = parseInt(this.currentYear);
             if (month > 12) {
                 month = 1;
                 year++;
             }
-            document.getElementById('month-select').value = month;
-            document.getElementById('year-select').value = year;
+
+            const monthSelect = document.getElementById('month-select');
+            const yearSelect = document.getElementById('year-select');
+            if (monthSelect) monthSelect.value = month;
+            if (yearSelect) yearSelect.value = year;
+
             this.loadMonth(year, month);
         });
 
@@ -296,15 +391,14 @@ const App = {
             <div class="tutorial-content">
                 <div class="tutorial-step">
                     <h4>1. Adicionando Despesas</h4>
-                    <p>Clique no botão + ao lado de uma categoria para adicionar uma nova despesa. 
-                    Preencha a descrição, valor previsto e dia de vencimento.</p>
+                    <p>Clique no botão + ao lado de uma categoria para adicionar uma nova despesa. Preencha a descrição, valor previsto e dia de vencimento.</p>
                 </div>
                 <div class="tutorial-step">
                     <h4>2. Datas Especiais</h4>
-                    <ul>
-                        <li><strong>Dia -1:</strong> Pagamentos atrasados do mês anterior</li>
-                        <li><strong>Dia 0:</strong> Lembretes de despesas futuras</li>
-                        <li><strong>Dia 1-31:</strong> Data normal de vencimento</li>
+                    <ul style="list-style-type: none; padding-left: 0;">
+                        <li>- Dia -1: Pagamentos atrasados do mês anterior</li>
+                        <li>- Dia 0: Lembretes de despesas futuras</li>
+                        <li>- Dia 1-31: Data normal de vencimento</li>
                     </ul>
                 </div>
                 <div class="tutorial-step">
@@ -345,7 +439,6 @@ const App = {
                         <li>d) frequência de backup.</li>
                     </ul>
                 </div>
-
             </div>
         `;
 

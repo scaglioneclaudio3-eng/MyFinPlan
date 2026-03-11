@@ -18,6 +18,9 @@
     <div id="app">
         <!-- Header with month navigation -->
         <header class="app-header">
+            <div class="header-logo">
+                <img src="assets/icon.png" alt="MyFinPlan Logo">
+            </div>
             <div class="month-nav">
                 <button id="prev-month" class="nav-btn" title="Mês Anterior">◀</button>
                 <div class="month-selector">
@@ -284,7 +287,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="income-planned-amount">Valor Previsto (R$)</label>
-                        <input type="number" id="income-planned-amount" step="0.01" min="0" required>
+                        <input type="text" id="income-planned-amount" required placeholder="0,00">
                     </div>
                     <div class="form-group">
                         <label for="income-planned-date">Dia Previsto</label>
@@ -296,7 +299,7 @@
                 <div class="form-row" id="income-received-row">
                     <div class="form-group">
                         <label for="income-received-amount">Valor Recebido (R$)</label>
-                        <input type="number" id="income-received-amount" step="0.01" min="0">
+                        <input type="text" id="income-received-amount" placeholder="0,00">
                     </div>
                     <div class="form-group">
                         <label for="income-received-date">Dia do Recebimento</label>

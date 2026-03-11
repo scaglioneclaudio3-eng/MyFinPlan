@@ -53,8 +53,8 @@
 }
 
 .calendar-day.weekend {
-    background-color: #f5f5dc;
-    /* Beige for weekend */
+    background-color: #E0E0E0;
+    /* Light gray for weekend */
 }
 
 .calendar-day.holiday {
@@ -101,8 +101,9 @@
 }
 
 .calendar-day-content {
-    font-size: 10px;
-    /* Smaller font for more data */
+    font-size: 11px;
+    font-weight: bold;
+    /* Slightly larger font and bold per user request */
     max-height: 100px;
     overflow-y: auto;
     display: flex;
@@ -178,8 +179,8 @@
     justify-content: space-between;
     padding: 1px 4px;
     border-radius: 2px;
-    font-size: 9px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: bold;
 }
 
 .calendar-flux-item.plan {

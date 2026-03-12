@@ -215,11 +215,11 @@ body {
 /* Entry View */
 .entry-container {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 1fr 1fr;
     grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas:
         "expenses income"
-        "daily    income";
+        "daily_exp daily_inc";
     gap: var(--spacing-md);
     /* Reduced from lg to save space */
     height: calc(100% - 80px);

@@ -36,24 +36,9 @@ const Expenses = {
      * @returns {Array} List of overdue expenses
      */
     getOverdue() {
-        if (!DataStore.currentMonth) return [];
-
-        const today = new Date().getDate();
-        const currentMonth = new Date().getMonth() + 1;
-        const currentYear = new Date().getFullYear();
-
-        // Only check if we're in the current month
-        if (DataStore.currentMonth.month !== currentMonth || DataStore.currentMonth.year !== currentYear) {
-            return [];
-        }
-
-        return DataStore.currentMonth.expenses.filter(e => {
-            if (e.plannedDate <= 0 || e.plannedDate > today) return false;
-            const paidPercentage = e.plannedAmount > 0
-                ? (e.paidAmount || 0) / e.plannedAmount
-                : 0;
-            return paidPercentage < 1;
-        });
+        // With independent daily actual expenses, individual planned expenses
+        // are no longer tracked for payment status.
+        return [];
     },
 
     /**
@@ -94,12 +79,14 @@ const Expenses = {
 
         // Date validation
         if (expense.plannedDate !== null && expense.plannedDate !== undefined) {
-            const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
-            if (expense.plannedDate > daysInMonth) {
-                errors.push(`Dia inválido. Este mês tem apenas ${daysInMonth} dias.`);
-            }
-            if (expense.plannedDate < -1) {
-                errors.push('Dia deve ser -1 (atrasado), 0 (futuro) ou 1-31');
+            if (expense.plannedDate !== 'all' && expense.plannedDate !== 'fds') {
+                const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
+                if (expense.plannedDate > daysInMonth) {
+                    errors.push(`Dia inválido. Este mês tem apenas ${daysInMonth} dias.`);
+                }
+                if (expense.plannedDate < -1) {
+                    errors.push('Dia deve ser -1 (atrasado), 0 (futuro), 1-31, all ou fds');
+                }
             }
         }
 

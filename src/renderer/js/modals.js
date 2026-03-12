@@ -89,11 +89,10 @@ const Modals = {
             document.getElementById('expense-description').value = expense.description || '';
             document.getElementById('expense-planned-amount').value = expense.plannedAmount || '';
             document.getElementById('expense-planned-date').value = expense.plannedDate ?? '';
-            document.getElementById('expense-paid-amount').value = expense.paidAmount || '';
-            document.getElementById('expense-paid-date').value = expense.paidDate || '';
             document.getElementById('expense-is-template').checked = expense.isTemplate || false;
             document.getElementById('expense-special-type').value = expense.specialType || '';
             deleteBtn.style.display = 'block';
+            title.textContent = 'Editar Lançamento';
         } else {
             title.textContent = 'Nova Despesa';
             deleteBtn.style.display = 'none';
@@ -112,74 +111,33 @@ const Modals = {
      * @param {string|number} plannedDateValue - The value of the planned date input
      */
     toggleExpenseBlocking() {
-        // Rule 3: Paid fields depend on Planned fields
-        const plannedAmountInput = document.getElementById('expense-planned-amount');
-        const plannedDateInput = document.getElementById('expense-planned-date');
-        const paidAmountInput = document.getElementById('expense-paid-amount');
-        const paidDateInput = document.getElementById('expense-paid-date');
+        // Application State
+        const specialTypeInput = document.getElementById('expense-special-type');
+        if (specialTypeInput) {
+            const plannedDateInput = document.getElementById('expense-planned-date');
+            const plannedDateValue = (plannedDateInput.value || '').toString().trim().toLowerCase();
+            const isAll = plannedDateValue === 'all';
+            const isFds = plannedDateValue === 'fds';
 
-        const plannedAmount = parseFloat(plannedAmountInput.value) || 0;
-        const plannedDateValue = plannedDateInput.value;
-
-        // Check conditions
-        const hasPlannedAmount = plannedAmount > 0;
-        // Date is required. Value '0' is allowed (future reminder) but handling changed.
-        // Rule 3 says "respectivo campo de despesa planejada... deve estar previamente preenchido".
-        // It implies amount and date.
-        const hasPlannedDate = plannedDateValue !== '' && plannedDateValue !== null;
-
-        // Special case: Future Reminder (Day 0) logic merge
-        // If plannedDate is 0, we treat it as "Future", often blocking payment.
-        const isFutureReminder = parseInt(plannedDateValue) === 0;
-
-        let shouldEnablePaid = hasPlannedAmount && hasPlannedDate;
-
-        if (isFutureReminder) {
-            shouldEnablePaid = false; // Future reminders cannot be paid yet
-        }
-
-        // Apply state
-        if (!shouldEnablePaid) {
-            paidAmountInput.disabled = true;
-            paidDateInput.disabled = true;
-
-            // Set titles for explanation
-            if (isFutureReminder) {
-                const msg = 'Indisponível para lembretes futuros';
-                paidAmountInput.title = msg;
-                paidDateInput.title = msg;
+            if (isAll || isFds) {
+                specialTypeInput.disabled = true;
+                specialTypeInput.value = '';
+                specialTypeInput.title = 'Despesas diárias/fds não podem ser trabalhistas';
             } else {
-                const msg = 'Preencha o valor e data previstos primeiro';
-                paidAmountInput.title = msg;
-                paidDateInput.title = msg;
+                specialTypeInput.disabled = false;
+                specialTypeInput.title = '';
             }
-
-            // Clear values if dependent parents are invalid?
-            // User rules don't strictly say clear, but if it effectively disables, 
-            // the form submit logic shouldn't read them or they should be empty.
-            // Current "Income" logic clears/hides. Let's keep them visible but disabled (standard).
-            // But if user clears planned amount, having an orphaned paid amount is weird.
-            // Let's stick to just disabling for now to allow correction if accidental clearing.
-        } else {
-            paidAmountInput.disabled = false;
-            paidDateInput.disabled = false;
-            paidAmountInput.title = '';
-            paidDateInput.title = '';
         }
-
-        // Remove old style/events logic (cleaned up by replacement)
     },
-
-
 
     toggleIncomeBlocking(plannedDateValue) {
         const receivedAmountInput = document.getElementById('income-received-amount');
         const receivedDateInput = document.getElementById('income-received-date');
         const plannedAmountInput = document.getElementById('income-planned-amount');
 
-        // Normalize checking: "ALL" is case-insensitive
-        const plannedDateStr = (plannedDateValue || '').toString().trim().toUpperCase();
-        const isAll = plannedDateStr === 'ALL';
+        // Normalize checking: "all" is case-insensitive
+        const plannedDateStr = (plannedDateValue || '').toString().trim().toLowerCase();
+        const isAll = plannedDateStr === 'all';
 
         // Helper for float parsing with comma support
         const parseAmount = (val) => {
@@ -235,7 +193,7 @@ const Modals = {
         document.getElementById('delete-income-btn').style.display = income ? 'block' : 'none';
 
         // Prepare initial values
-        let plannedDateVal = 'ALL';
+        let plannedDateVal = 'all';
 
         if (income) {
             document.getElementById('income-id').value = income.id;
@@ -279,6 +237,9 @@ const Modals = {
         document.getElementById('setting-saturday-pct').value = settings.saturdayIncomePercentage;
         document.getElementById('setting-sunday-pct').value = settings.sundayIncomePercentage;
         document.getElementById('setting-holiday-percentage').value = settings.holidayIncomePercentage ?? 0;
+        document.getElementById('setting-expense-saturday-pct').value = settings.saturdayExpensePercentage ?? 100;
+        document.getElementById('setting-expense-sunday-pct').value = settings.sundayExpensePercentage ?? 100;
+        document.getElementById('setting-expense-holiday-pct').value = settings.holidayExpensePercentage ?? 100;
         document.getElementById('setting-state').value = settings.state || '';
         document.getElementById('setting-city').value = settings.city || '';
         document.getElementById('setting-backup-enabled').checked = settings.backupEnabled;
@@ -361,6 +322,160 @@ const Modals = {
         }
 
         this.open('daily-income-details-modal');
+    },
+
+    updateDailyExpenseModalTotal() {
+        let total = 0;
+        const modal = document.getElementById('daily-expense-details-modal');
+        modal.querySelectorAll('.actual-amount-input').forEach(input => {
+            const val = parseFloat(input.value) || 0;
+            total += val;
+        });
+        document.getElementById('daily-expense-modal-total').textContent = formatCurrency(total);
+    },
+
+    async openDailyExpenseDetailsModal(day) {
+        try {
+            if (window.api && window.api.showMessage) {
+                await window.api.showMessage('INICIO DA FUNCAO DE ABRIR', 'info');
+            }
+            const modal = document.getElementById('daily-expense-details-modal');
+            const title = document.getElementById('daily-expense-details-title');
+            const container = document.getElementById('daily-expense-categories-container');
+            const saveBtn = document.getElementById('save-daily-expense-btn');
+
+            // Validation
+            const now = new Date();
+            const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const year = parseInt(DataStore.currentMonth.year);
+            const month = parseInt(DataStore.currentMonth.month);
+            const selectedDate = new Date(year, month - 1, parseInt(day));
+            const isFuture = selectedDate > todayDate;
+
+            modal.dataset.day = day;
+            title.textContent = isFuture 
+                ? `Detalhamento da Despesa (Somente Leitura - Futuro)` 
+                : `Detalhamento da Despesa do Dia ${day}/${String(month).padStart(2, '0')}`;
+            
+            container.innerHTML = '';
+            saveBtn.style.display = isFuture ? 'none' : 'inline-block';
+
+            const categories = [...DataStore.categories].sort((a, b) => a.order - b.order);
+            const expensesByDay = DataStore.getExpensesByDay();
+            const plannedForDay = expensesByDay[day]?.expenses || [];
+            
+            if(!DataStore.currentMonth.dailyActualExpenseDetails) {
+                DataStore.currentMonth.dailyActualExpenseDetails = {};
+            }
+            const existingDetails = DataStore.currentMonth.dailyActualExpenseDetails[day] || {};
+
+            categories.forEach(cat => {
+                const catPlanned = plannedForDay.filter(e => e.categoryId === cat.id);
+                const catActuals = existingDetails[cat.id] || [];
+
+
+            // Skip rendering if category has no planned expenses today and we are in future (read-only)
+            if (isFuture && catPlanned.length === 0 && catActuals.length === 0) return;
+
+            const catDiv = document.createElement('div');
+            catDiv.className = 'expense-detail-category-group';
+            catDiv.style = `border-left: 6px solid ${cat.color}; padding-left: 10px; margin-bottom: 20px; background-color: var(--bg-secondary); padding: 10px; border-radius: var(--border-radius);`;
+            
+            let html = `<h4 style="margin-top: 0; margin-bottom: 10px; color: ${cat.color};">${cat.name}</h4>`;
+            html += `<div class="planned-items-container" data-cat-id="${cat.id}">`;
+
+            catPlanned.forEach(plannedExp => {
+                const savedActual = catActuals.find(a => a.expenseId === plannedExp.id);
+                const actualValue = savedActual ? savedActual.amount : '';
+                html += `
+                    <div class="expense-detail-row planned-expense" data-expense-id="${plannedExp.id}" style="display: flex; margin-bottom: 8px; align-items: center;">
+                        <span style="flex: 1; padding-right: 10px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${plannedExp.description} <small class="text-muted">(Prev: ${formatCurrency(plannedExp.plannedAmount)})</small></span>
+                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="Valor Pago (R$)" value="${actualValue}" style="width: 130px; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                    </div>
+                `;
+            });
+
+            const extraActuals = catActuals.filter(a => a.isExtra);
+            extraActuals.forEach(extra => {
+                html += `
+                    <div class="expense-detail-row extra-expense" style="display: flex; margin-bottom: 8px; align-items: center;">
+                        <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" value="${extra.description}" style="flex: 1; margin-right: 10px; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="Valor Pago (R$)" value="${extra.amount}" style="width: 130px; margin-right: 10px; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                        ${!isFuture ? `<button type="button" class="btn-remove-extra" title="Remover" style="background: none; border: none; font-size: 1.2em; color: var(--danger-color); cursor: pointer;">&times;</button>` : ''}
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            if (!isFuture) {
+                html += `<button type="button" class="btn btn-outline btn-sm add-extra-btn" style="margin-top: 10px; padding: 4px 8px;">+ Adicionar Extra</button>`;
+            }
+            
+            catDiv.innerHTML = html;
+            container.appendChild(catDiv);
+
+            if (!isFuture) {
+                const addExtraBtn = catDiv.querySelector('.add-extra-btn');
+                const itemsContainer = catDiv.querySelector('.planned-items-container');
+                
+                addExtraBtn.addEventListener('click', () => {
+                    const extraDiv = document.createElement('div');
+                    extraDiv.className = 'expense-detail-row extra-expense';
+                    extraDiv.style = `display: flex; margin-bottom: 8px; align-items: center;`;
+                    extraDiv.innerHTML = `
+                        <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" style="flex: 1; margin-right: 10px; padding: 4px;">
+                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="Valor Pago" style="width: 130px; margin-right: 10px; padding: 4px;">
+                        <button type="button" class="btn-remove-extra" title="Remover" style="background: none; border: none; font-size: 1.2em; color: var(--danger-color); cursor: pointer;">&times;</button>
+                    `;
+                    
+                    extraDiv.querySelector('.btn-remove-extra').addEventListener('click', () => {
+                        extraDiv.remove();
+                        this.updateDailyExpenseModalTotal();
+                    });
+                    extraDiv.querySelector('.actual-amount-input').addEventListener('input', () => this.updateDailyExpenseModalTotal());
+
+                    itemsContainer.appendChild(extraDiv);
+                    extraDiv.querySelector('.extra-desc-input').focus();
+                });
+
+                catDiv.querySelectorAll('.btn-remove-extra').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.target.closest('.extra-expense').remove();
+                        this.updateDailyExpenseModalTotal();
+                    });
+                });
+
+                catDiv.querySelectorAll('.actual-amount-input').forEach(input => {
+                    input.addEventListener('input', () => this.updateDailyExpenseModalTotal());
+                });
+            }
+        });
+
+        if (container.children.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center" style="padding: 20px;">Nenhuma categoria configurada ou dados não disponíveis.</p>';
+        }
+
+        if (window.api && window.api.showMessage) {
+            await window.api.showMessage('VAI ABRIR O MODAL E ATUALIZAR TOTAL', 'info');
+        }
+        this.updateDailyExpenseModalTotal();
+        this.open('daily-expense-details-modal');
+
+        const computedStyle = window.getComputedStyle(modal);
+        if (window.api && window.api.showMessage) {
+            await window.api.showMessage('FIM DA FUNCAO. DISPLAY DO MODAL: ' + computedStyle.display + '\nzIndex: ' + computedStyle.zIndex, 'info');
+        }
+
+        if (computedStyle.display === 'none' && window.api && window.api.showMessage) {
+            await window.api.showMessage('Aviso interno: O modal existe, as categorias foram renderizadas, a classe .show (' + modal.className + ') foi aplicada, mas o CSS getComputedStyle(modal).display ainda é "none" ou algo falhou.', 'error');
+        }
+
+        } catch (e) {
+            console.error(e);
+            if (window.api && window.api.showMessage) {
+                window.api.showMessage('Erro fatal ao renderizar o modal:\n' + e.message + '\n\n' + e.stack, 'error');
+            }
+        }
     },
 
     /**
@@ -543,12 +658,18 @@ const Modals = {
             e.preventDefault();
 
             const specialType = document.getElementById('expense-special-type').value || null;
-            const plannedDate = parseInt(document.getElementById('expense-planned-date').value) || 0;
+            const plannedDateInput = document.getElementById('expense-planned-date').value.trim().toLowerCase();
+            let plannedDate = 0;
+            if (plannedDateInput === 'all' || plannedDateInput === 'fds') {
+                plannedDate = plannedDateInput;
+            } else {
+                plannedDate = parseInt(plannedDateInput) || 0;
+            }
 
             // Check for worker expense non-standard dates
             const isWorkerExpense = ['SALARY_ADVANCE', 'INSS', 'FGTS', 'FIFTH_WORKING_DAY', 'VALE_TRANSPORTE', 'VALE_ALIMENTACAO', 'CESTA_BASICA'].includes(specialType);
             const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
-            const isStandardDate = plannedDate === 15 || plannedDate === daysInMonth;
+            const isStandardDate = plannedDate === 15 || plannedDate === daysInMonth || plannedDate === 'all' || plannedDate === 'fds';
 
             if (isWorkerExpense && !isStandardDate) {
                 // Store form data temporarily to use after choice
@@ -557,8 +678,6 @@ const Modals = {
                     description: document.getElementById('expense-description').value.trim(),
                     plannedAmount: parseFloat(document.getElementById('expense-planned-amount').value) || 0,
                     plannedDate: plannedDate,
-                    paidAmount: parseFloat(document.getElementById('expense-paid-amount').value) || null,
-                    paidDate: document.getElementById('expense-paid-date').value.trim() || null,
                     isTemplate: document.getElementById('expense-is-template').checked,
                     specialType: specialType,
                     id: document.getElementById('expense-id').value
@@ -612,11 +731,11 @@ const Modals = {
             e.preventDefault();
 
             // Parse planned date
-            const plannedDateInput = document.getElementById('income-planned-date').value.trim().toUpperCase();
-            let plannedDate = 'ALL';
+            const plannedDateInput = document.getElementById('income-planned-date').value.trim().toLowerCase();
+            let plannedDate = 'all';
 
-            if (plannedDateInput === 'ALL') {
-                plannedDate = 'ALL';
+            if (plannedDateInput === 'all') {
+                plannedDate = 'all';
             } else {
                 const day = parseInt(plannedDateInput);
                 const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
@@ -627,7 +746,7 @@ const Modals = {
                     // Allow empty during intermediate editing
                     plannedDate = null;
                 } else {
-                    showToast(`Dia previsto inválido. Digite "ALL" ou um dia entre 1 e ${daysInMonth}.`, 'error');
+                    showToast(`Dia previsto inválido. Digite "all" ou um dia entre 1 e ${daysInMonth}.`, 'error');
                     return;
                 }
             }
@@ -750,6 +869,9 @@ const Modals = {
             DataStore.settings.saturdayIncomePercentage = parseInt(document.getElementById('setting-saturday-pct').value) || 50;
             DataStore.settings.sundayIncomePercentage = parseInt(document.getElementById('setting-sunday-pct').value) || 50;
             DataStore.settings.holidayIncomePercentage = parseInt(document.getElementById('setting-holiday-percentage').value) || 0;
+            DataStore.settings.saturdayExpensePercentage = parseInt(document.getElementById('setting-expense-saturday-pct').value) ?? 100;
+            DataStore.settings.sundayExpensePercentage = parseInt(document.getElementById('setting-expense-sunday-pct').value) ?? 100;
+            DataStore.settings.holidayExpensePercentage = parseInt(document.getElementById('setting-expense-holiday-pct').value) ?? 100;
             DataStore.settings.state = document.getElementById('setting-state').value;
             DataStore.settings.city = document.getElementById('setting-city').value;
             DataStore.settings.backupEnabled = document.getElementById('setting-backup-enabled').checked;
@@ -835,14 +957,6 @@ const Modals = {
                     }
                 });
 
-                // Keeping the timeout fix as user requested "structure before... since the fix of future expense"
-                // Actually, the timeout fix came LATER than the future expense fix.
-                // The user said "start from app structure BEFORE ALL CHANGES SINCE THE FIX OF FUTURE EXPENSE".
-                // The future expense fix was Step 256 (roughly). The timeout fix was Step 256 as well (part of refactor).
-                // So I should arguably remove the timeout if I am reverting strictly.
-                // But the user complained about freezing.
-                // I will include the timeout because it's good practice and invisible to structure.
-
                 const savePromise = DataStore.updateDailyIncomeDetails(day, entries);
                 const timeoutPromise = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('Tempo limite excedido ao salvar')), 5000)
@@ -863,19 +977,105 @@ const Modals = {
                 saveBtn.textContent = 'Salvar';
             }
         });
+
+        // Daily Expense Details Modal logic
+        document.getElementById('save-daily-expense-btn').addEventListener('click', async () => {
+            const saveBtn = document.getElementById('save-daily-expense-btn');
+            try {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Salvando...';
+
+                const modal = document.getElementById('daily-expense-details-modal');
+                const day = parseInt(modal.dataset.day);
+                const container = document.getElementById('daily-expense-categories-container');
+                
+                const detailsToSave = {};
+                let totalDaySum = 0;
+
+                container.querySelectorAll('.expense-detail-category-group').forEach(catDiv => {
+                    const catId = catDiv.querySelector('.planned-items-container').dataset.catId;
+                    const catItems = [];
+
+                    catDiv.querySelectorAll('.planned-expense').forEach(row => {
+                        const expId = row.dataset.expenseId;
+                        const amount = parseFloat(row.querySelector('.actual-amount-input').value);
+                        if (!isNaN(amount) && amount > 0) {
+                            catItems.push({ expenseId: expId, amount: amount });
+                            totalDaySum += amount;
+                        }
+                    });
+
+                    catDiv.querySelectorAll('.extra-expense').forEach(row => {
+                        const desc = row.querySelector('.extra-desc-input').value.trim();
+                        const amount = parseFloat(row.querySelector('.actual-amount-input').value);
+                        if (!isNaN(amount) && amount > 0) {
+                            catItems.push({ description: desc || 'Despesa Extra', amount: amount, isExtra: true });
+                            totalDaySum += amount;
+                        }
+                    });
+
+                    if (catItems.length > 0) {
+                        detailsToSave[catId] = catItems;
+                    }
+                });
+
+                if (!DataStore.currentMonth.dailyActualExpenseDetails) {
+                    DataStore.currentMonth.dailyActualExpenseDetails = {};
+                }
+                if (!DataStore.currentMonth.dailyActualExpense) {
+                    DataStore.currentMonth.dailyActualExpense = {};
+                }
+
+                DataStore.currentMonth.dailyActualExpenseDetails[day] = detailsToSave;
+                DataStore.currentMonth.dailyActualExpense[day] = totalDaySum;
+
+                // Save internally
+                const savePromise = DataStore.saveMonth();
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Tempo limite excedido ao salvar')), 5000)
+                );
+                await Promise.race([savePromise, timeoutPromise]);
+
+                // Update UI elements dependent on expense totals
+                Categories.renderDailyActualExpenses();
+                Categories.render(); 
+                App.updateSummary();
+                if (document.getElementById('calendar-view').classList.contains('active')) {
+                    Calendar.render();
+                }
+
+                this.closeAll();
+                showToast(`Despesas do dia ${day} salvas`, 'success');
+            } catch (error) {
+                console.error('Erro ao salvar despesa diária:', error);
+                await window.api.showMessage(`Erro ao salvar: ${error.message || 'Erro desconhecido'}`, 'error');
+                showToast('Erro ao salvar dados', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Salvar';
+            }
+        });
     },
 
     /**
      * Saves expense data collected from the form
      */
     async saveExpenseFromForm() {
+        const plannedDateInput = document.getElementById('expense-planned-date').value.trim().toLowerCase();
+        let plannedDate = 0;
+        if (plannedDateInput === 'all' || plannedDateInput === 'fds') {
+            plannedDate = plannedDateInput;
+        } else {
+            plannedDate = parseInt(plannedDateInput) || 0;
+        }
+
         const expense = {
             categoryId: document.getElementById('expense-category-id').value,
             description: document.getElementById('expense-description').value.trim(),
             plannedAmount: parseFloat(document.getElementById('expense-planned-amount').value) || 0,
-            plannedDate: parseInt(document.getElementById('expense-planned-date').value) || 0,
-            paidAmount: parseFloat(document.getElementById('expense-paid-amount').value) || null,
-            paidDate: document.getElementById('expense-paid-date').value.trim() || null,
+            plannedDate: plannedDate,
+            paidAmount: null,
+            paidDate: null,
             isTemplate: document.getElementById('expense-is-template').checked,
             specialType: document.getElementById('expense-special-type').value || null
         };

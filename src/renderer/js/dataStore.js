@@ -18,6 +18,9 @@ const DataStore = {
         saturdayIncomePercentage: 50,
         sundayIncomePercentage: 50,
         holidayIncomePercentage: 0,
+        saturdayExpensePercentage: 100,
+        sundayExpensePercentage: 100,
+        holidayExpensePercentage: 100,
         state: 'SP',
         city: '',
         backupEnabled: true,
@@ -177,6 +180,8 @@ const DataStore = {
                 incomes: [],
                 dailyActualIncome: {},
                 dailyActualIncomeDetails: {},
+                dailyActualExpense: {},
+                dailyActualExpenseDetails: {},
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
@@ -540,33 +545,28 @@ const DataStore = {
         for (let d = 1; d <= safeEndDay; d++) {
             if (expensesByDay[d]) {
                 totals.plannedExpenses += expensesByDay[d].totalPlanned || 0;
-                totals.paidExpenses += expensesByDay[d].totalPaid || 0;
+                // totals.paidExpenses calculation removed from here, moving to daily bucket
             }
         }
 
-        // Fines (calculated from raw list because 'totalPaid' in daily bucket doesn't separate fines)
-        // But fines should also be "up to today"? 
-        // Let's iterate expenses again and check "paidDate" <= calculationEndDay maybe?
-        // Or just keep total accumulated fines as a global metric? Simple is better.
-        // Actually, let's stick to the Chart alignment. Charts don't show fines explicitly.
-        // But for Summary: "accumulated figures... up to present date".
-        // Let's recalculate fines strictly.
-        for (const expense of this.currentMonth.expenses) {
-            if (expense.paidAmount > expense.plannedAmount && expense.paidDate) {
-                // Check if paid date is within range
-                // Simplification: if paidDate is day number
-                const pDay = parseInt(expense.paidDate);
-                if (!isNaN(pDay) && pDay <= safeEndDay) {
-                    totals.accumulatedFines += (expense.paidAmount - expense.plannedAmount);
+        // Sum actual expenses from the new dailyActualExpense independent bucket
+        if (this.currentMonth.dailyActualExpense) {
+            for (let d = 1; d <= safeEndDay; d++) {
+                if (this.currentMonth.dailyActualExpense[d]) {
+                    totals.paidExpenses += this.currentMonth.dailyActualExpense[d];
                 }
             }
         }
 
+        // Fines (calculated from raw list because 'totalPaid' in daily bucket doesn't separate fines)
+        // Since paid amounts are decoupled from individual planned expenses, fines are no longer calculable this way.
+        totals.accumulatedFines = 0;
+
 
         // 2. INCOME (Planned) - Reusing logic but simpler loop
         const recurringIncomes = this.currentMonth.incomes.filter(i => {
-            const dateStr = String(i.plannedDate || '').toUpperCase();
-            return dateStr === 'ALL' || dateStr === '';
+            const dateStr = String(i.plannedDate || '').toLowerCase();
+            return dateStr === 'all' || dateStr === '';
         });
         const dailyRecurringBase = recurringIncomes.reduce((sum, i) => sum + (i.plannedAmount || 0), 0);
 
@@ -604,8 +604,8 @@ const DataStore = {
 
         // Add Dated Incomes (Specific Day) - Filter by Effective Date
         const datedIncomes = this.currentMonth.incomes.filter(i => {
-            const ds = String(i.plannedDate || '').toUpperCase();
-            return ds !== 'ALL' && ds !== '';
+            const ds = String(i.plannedDate || '').toLowerCase();
+            return ds !== 'all' && ds !== '';
         });
 
         for (const inc of datedIncomes) {
@@ -664,6 +664,83 @@ const DataStore = {
 
             // 1. Determine Effective Due Date (for Planned Flow & List Display)
             let effectiveDueDay = expense.plannedDate;
+
+            if (effectiveDueDay === 'all') {
+                const satWeight = (this.settings.saturdayExpensePercentage ?? 100) / 100;
+                const sunWeight = (this.settings.sundayExpensePercentage ?? 100) / 100;
+                const holidayFactor = (this.settings.holidayExpensePercentage ?? 100) / 100;
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const date = new Date(year, month - 1, d);
+                    const dayOfWeek = date.getDay();
+                    const isHoliday = this.holidays.includes(dateStr);
+
+                    let factor = 1;
+                    if (isHoliday) {
+                        factor = holidayFactor;
+                    } else if (dayOfWeek === 6) {
+                        factor = satWeight;
+                    } else if (dayOfWeek === 0) {
+                        factor = sunWeight;
+                    }
+
+                    if (factor > 0 && byDay[d]) {
+                        const dailyAmount = (expense.plannedAmount || 0) * factor;
+
+                        byDay[d].expenses.push({
+                            ...expense,
+                            plannedAmount: dailyAmount,
+                            originalDay: 'all',
+                            effectiveDay: d,
+                            category: category
+                        });
+
+                        byDay[d].totalPlanned += dailyAmount;
+                    }
+                }
+                
+                // Paid amounts are not allowed natively for 'all'
+                continue;
+            } else if (effectiveDueDay === 'fds') {
+                const satWeight = (this.settings.saturdayExpensePercentage ?? 100) / 100;
+                const sunWeight = (this.settings.sundayExpensePercentage ?? 100) / 100;
+                const holidayFactor = (this.settings.holidayExpensePercentage ?? 100) / 100;
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const date = new Date(year, month - 1, d);
+                    const dayOfWeek = date.getDay();
+                    const isHoliday = this.holidays.includes(dateStr);
+
+                    let factor = 0;
+                    if (isHoliday) {
+                        factor = holidayFactor;
+                    } else if (dayOfWeek === 6) {
+                        factor = satWeight;
+                    } else if (dayOfWeek === 0) {
+                        factor = sunWeight;
+                    }
+
+                    if (factor > 0 && byDay[d]) {
+                        const dailyAmount = (expense.plannedAmount || 0) * factor;
+
+                        byDay[d].expenses.push({
+                            ...expense,
+                            plannedAmount: dailyAmount,
+                            originalDay: 'fds',
+                            effectiveDay: d,
+                            category: category
+                        });
+
+                        byDay[d].totalPlanned += dailyAmount;
+                    }
+                }
+                
+                // Paid amounts are not allowed natively for 'fds'
+                continue;
+            }
+
             if (effectiveDueDay > 0) {
                 effectiveDueDay = getEffectiveDate(year, month, expense, this.holidays);
             } else if (effectiveDueDay === -1) {

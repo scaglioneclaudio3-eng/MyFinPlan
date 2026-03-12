@@ -422,7 +422,7 @@ const App = {
                     <p>Receitas previstas e efetivas em fins de semana e feriados são inseridas pelo App no primeiro subsequente dia útil.</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>8. Receitas Previstas Recorrentes (ALL)</h4>
+                    <h4>8. Receitas (ou Despesas) Previstas Recorrentes (all)</h4>
                     <p>Receitas previstas definidas com dia "all" são médias previstas pelo usuário e se aplicam a todos os dias do mês, e sábados, domingos e feriados seguem porcentagens dessas receitas, conforme o especificado em configurações.</p>
                 </div>
                 <div class="tutorial-step">

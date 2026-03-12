@@ -18,6 +18,112 @@ const Categories = {
             const card = this.createCategoryCard(category);
             container.appendChild(card);
         }
+
+        this.renderDailyActualExpenses();
+    },
+
+    /**
+     * Renders the daily actual expense grid
+     */
+    renderDailyActualExpenses() {
+        const grid = document.getElementById('daily-expense-grid');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+
+        if (!DataStore.currentMonth) return;
+
+        const { year, month } = DataStore.currentMonth;
+        const daysInMonth = getDaysInMonth(year, month);
+        const dailyActuals = DataStore.currentMonth.dailyActualExpense || {};
+
+        const fragment = document.createDocumentFragment();
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const item = document.createElement('div');
+            item.className = 'daily-income-item'; // Reusing this class for styling
+
+            // Determine special statuses
+            const dateObj = new Date(year, month - 1, d);
+            const dayOfWeek = dateObj.getDay();
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+            // Check for Holiday
+            if (DataStore.holidays && DataStore.holidays.includes(dateStr)) {
+                item.classList.add('is-holiday');
+            }
+
+            // Check for Weekend
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                item.classList.add('is-weekend');
+            }
+
+            // Calculate Grid Column
+            item.style.gridColumnStart = dayOfWeek + 1;
+
+            // Check for Today
+            const now = new Date();
+            if (now.getDate() === d && now.getMonth() === (month - 1) && now.getFullYear() === year) {
+                item.classList.add('is-today');
+            }
+
+            const rawValue = dailyActuals[d];
+            let displayValue = '';
+            if (rawValue && rawValue > 0) {
+                displayValue = rawValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            const weekdayInitial = getWeekdayName(dayOfWeek).charAt(0);
+
+            item.innerHTML = `
+                <div class="daily-item-header">
+                    <label>${d}${weekdayInitial}</label>
+                </div>
+            `;
+
+            const valDiv = document.createElement('div');
+            valDiv.className = 'daily-expense-value';
+            valDiv.textContent = displayValue;
+            valDiv.dataset.day = d;
+            valDiv.style.textAlign = 'center';
+            valDiv.style.fontWeight = 'bold';
+            valDiv.style.padding = '8px 0';
+            valDiv.style.backgroundColor = 'transparent'; // Fixes the black stripe
+            valDiv.style.color = 'white';
+            valDiv.style.marginTop = 'auto'; // push to bottom inside flex container
+            valDiv.style.pointerEvents = 'none'; // so click passes to item
+            
+            item.appendChild(valDiv);
+            
+            item.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    await Modals.openDailyExpenseDetailsModal(d);
+                } catch (err) {
+                    console.error('Error opening modal:', err);
+                    if (window.api && window.api.showMessage) {
+                        window.api.showMessage('Erro interno: ' + err.message, 'error');
+                    }
+                }
+            }, true); // use capture just in case
+
+            fragment.appendChild(item);
+        }
+
+        grid.appendChild(fragment);
+        
+        // Failsafe document click listener to hunt the shield
+        if (!window.__globalClickTrackerAdded) {
+            document.addEventListener('click', (e) => {
+                const isExpenseItem = e.target.closest('#daily-expense-grid .daily-income-item');
+                if (isExpenseItem) {
+                    const dayLabel = isExpenseItem.querySelector('.daily-item-header label')?.textContent;
+                    console.log('Global tracker caught click on expense item day:', dayLabel);
+                }
+            }, true);
+            window.__globalClickTrackerAdded = true;
+        }
     },
 
     /**
@@ -31,7 +137,58 @@ const Categories = {
         const currentExpenses = expenses.filter(e => e.plannedDate !== 0);
         const futureExpenses = expenses.filter(e => e.plannedDate === 0);
 
-        const currentTotal = currentExpenses.reduce((sum, e) => sum + (e.plannedAmount || 0), 0);
+        const year = DataStore.currentMonth?.year || new Date().getFullYear();
+        const month = DataStore.currentMonth?.month || (new Date().getMonth() + 1);
+        const daysInMonth = getDaysInMonth(year, month);
+        const holidays = DataStore.holidays || [];
+        const settings = DataStore.settings || {};
+
+        const satWeight = (settings.saturdayExpensePercentage ?? 100) / 100;
+        const sunWeight = (settings.sundayExpensePercentage ?? 100) / 100;
+        const holidayFactor = (settings.holidayExpensePercentage ?? 100) / 100;
+
+        let currentTotal = 0;
+        for (const e of currentExpenses) {
+            if (e.plannedDate === 'all') {
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const date = new Date(year, month - 1, d);
+                    const dayOfWeek = date.getDay();
+                    const isHoliday = holidays.includes(dateStr);
+
+                    let factor = 1;
+                    if (isHoliday) {
+                        factor = holidayFactor;
+                    } else if (dayOfWeek === 6) {
+                        factor = satWeight;
+                    } else if (dayOfWeek === 0) {
+                        factor = sunWeight;
+                    }
+
+                    currentTotal += (e.plannedAmount || 0) * factor;
+                }
+            } else if (e.plannedDate === 'fds') {
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const date = new Date(year, month - 1, d);
+                    const dayOfWeek = date.getDay();
+                    const isHoliday = holidays.includes(dateStr);
+
+                    let factor = 0; // Starts at 0 for fds, unlike 'all'
+                    if (isHoliday) {
+                        factor = holidayFactor;
+                    } else if (dayOfWeek === 6) {
+                        factor = satWeight;
+                    } else if (dayOfWeek === 0) {
+                        factor = sunWeight;
+                    }
+
+                    currentTotal += (e.plannedAmount || 0) * factor;
+                }
+            } else {
+                currentTotal += (e.plannedAmount || 0);
+            }
+        }
 
         // Map to formatted values string
         const futureValues = futureExpenses.map(e => formatCurrency(e.plannedAmount || 0));
@@ -121,87 +278,18 @@ const Categories = {
                         <th>Descrição</th>
                         <th class="amount">A Pagar</th>
                         <th class="date">Dia</th>
-                        <th class="amount">Pago</th>
-                        <th class="date">Dia</th>
-                        <th class="status">%</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
         for (const expense of expenses) {
-            const percentage = expense.plannedAmount > 0
-                ? Math.round((expense.paidAmount || 0) / expense.plannedAmount * 100)
-                : 0;
-
-            // Calculate effective day for status check
+            // Calculate effective day
             let effectiveDay = expense.plannedDate;
             if (effectiveDay === -1) {
                 effectiveDay = getNextWorkingDay(year, month, 1, holidays);
             } else if (effectiveDay > 0) {
                 effectiveDay = getEffectiveDate(year, month, expense, holidays);
-            }
-
-            let statusClass = '';
-            let statusText = '-';
-
-            // Compare full dates to handle month/year transitions correctly
-            const now = new Date();
-            // Create dates at midnight for accurate comparison
-            const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const expenseDate = new Date(year, month - 1, effectiveDay);
-
-            if (effectiveDay > 0 && expenseDate <= todayDate) {
-                if (percentage >= 100) {
-                    // Check if late payment (paidDate > effectiveDate)
-                    let isLate = false;
-                    if (expense.paidDate) {
-                        let paidDay = -1;
-                        let paidMonth = -1;
-                        let paidYear = year;
-
-                        if (typeof expense.paidDate === 'string' && expense.paidDate.includes('/')) {
-                            const parts = expense.paidDate.split('/');
-                            paidDay = parseInt(parts[0]);
-                            paidMonth = parseInt(parts[1]);
-
-                            if (paidMonth < month && year === todayDate.getFullYear() - 1) {
-                                paidYear = year + 1;
-                            }
-                        } else {
-                            paidDay = parseInt(expense.paidDate);
-                            paidMonth = month;
-                        }
-
-                        const paidDateObj = new Date(paidYear, paidMonth - 1, paidDay);
-
-                        if (paidDateObj > expenseDate) {
-                            isLate = true;
-                        }
-                    }
-
-                    if (isLate) {
-                        statusClass = 'partial'; // Yellow for late full payment
-                        statusText = '100%';
-                    } else {
-                        statusClass = 'paid'; // Green for on-time full payment
-                        statusText = '100%';
-                    }
-                } else if (percentage > 0) {
-                    statusClass = 'partial'; // Yellow for partial
-                    statusText = `${percentage}%`;
-                } else {
-                    statusClass = 'overdue'; // Red for unpaid overdue
-                    statusText = '0%';
-                }
-            } else if (expense.paidAmount > 0) {
-                if (percentage >= 100) {
-                    statusClass = 'paid';
-                    statusText = '100%';
-                } else {
-                    statusClass = 'partial';
-                    statusText = `${percentage}%`;
-                }
             }
 
             // Prefix description for future expenses
@@ -214,11 +302,6 @@ const Categories = {
                     <td>${descriptionDisplay}</td>
                     <td class="amount">${(expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-'}</td>
                     <td class="date">${expense.plannedDate === 0 ? 'Futuro' : expense.plannedDate}</td>
-                    <td class="amount">${expense.paidAmount ? formatCurrency(expense.paidAmount) : '-'}</td>
-                    <td class="date">${expense.paidDate || '-'}</td>
-                    <td class="status">
-                        ${statusText !== '-' ? `<span class="status-badge ${statusClass}">${statusText}</span>` : '-'}
-                    </td>
                 </tr>
             `;
         }

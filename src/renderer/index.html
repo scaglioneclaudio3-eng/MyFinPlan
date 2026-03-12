@@ -75,6 +75,16 @@
                         </div>
                     </div>
 
+                    <!-- Daily Expense panel -->
+                    <div id="daily-expense-panel" class="daily-expense-panel">
+                        <div class="panel-header">
+                            <h2>Despesas Efetivas Diárias</h2>
+                        </div>
+                        <div id="daily-expense-grid" class="daily-income-grid">
+                            <!-- Daily inputs will be rendered here -->
+                        </div>
+                    </div>
+
                     <!-- Income panel -->
                     <div class="income-panel">
                         <div class="panel-header">
@@ -228,20 +238,12 @@
                     </div>
                     <div class="form-group">
                         <label for="expense-planned-date">Dia Vencimento</label>
-                        <input type="number" id="expense-planned-date" min="-1" max="31" required>
-                        <small>-1: Atrasado, 0: Futuro, 1-31: Dia</small>
+                        <input type="text" id="expense-planned-date" placeholder="all, fds ou 1-31" required title="Digite 'all' para diário, 'fds' para finais de semana, -1: Atrasado, 0: Futuro, 1-31: Dia">
+                        <small>-1: Atrasado, 0: Futuro, 1-31: Dia, all: Diária, fds: Fins de Semana</small>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="expense-paid-amount">Valor Pago (R$)</label>
-                        <input type="number" id="expense-paid-amount" step="0.01" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="expense-paid-date">Dia Pagamento</label>
-                        <input type="text" id="expense-paid-date" placeholder="Dia ou Dia/Mês">
-                    </div>
-                </div>
                 <div class="form-group">
                     <label for="expense-special-type">Especifique abaixo, se despesa trabalhista</label>
                     <select id="expense-special-type">
@@ -291,8 +293,8 @@
                     </div>
                     <div class="form-group">
                         <label for="income-planned-date">Dia Previsto</label>
-                        <input type="text" id="income-planned-date" placeholder="ALL ou 1-31" required
-                            title="Digite 'ALL' para recorrente ou um dia (1-31)">
+                        <input type="text" id="income-planned-date" placeholder="all ou 1-31" required
+                            title="Digite 'all' para recorrente ou um dia (1-31)">
                     </div>
                 </div>
 
@@ -346,6 +348,23 @@
                         <div class="form-group">
                             <label for="setting-holiday-percentage">% feriado (esperado)</label>
                             <input type="number" id="setting-holiday-percentage" min="0" max="100" value="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h4>Despesas Previstas em Fins de Semana e Feriados</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="setting-expense-saturday-pct">% Sábado (Esperado)</label>
+                            <input type="number" id="setting-expense-saturday-pct" min="0" max="100" value="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="setting-expense-sunday-pct">% Domingo (Esperado)</label>
+                            <input type="number" id="setting-expense-sunday-pct" min="0" max="100" value="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="setting-expense-holiday-pct">% Feriado (Esperado)</label>
+                            <input type="number" id="setting-expense-holiday-pct" min="0" max="100" value="100">
                         </div>
                     </div>
                 </div>
@@ -459,6 +478,30 @@
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
                 <button type="button" id="save-daily-income-btn" class="btn btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Expense Details Modal -->
+    <div id="daily-expense-details-modal" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="daily-expense-details-title">Detalhamento da Despesa do Dia</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                <div id="daily-expense-categories-container">
+                    <!-- Categories and planned expenses injected here -->
+                </div>
+            </div>
+            <div class="form-actions" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: bold; font-size: 1.2em; color: var(--text-primary);">
+                    Total: <span id="daily-expense-modal-total" style="color: var(--danger-color); margin-left: 8px;">R$ 0,00</span>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" id="save-daily-expense-btn" class="btn btn-primary">Salvar</button>
+                </div>
             </div>
         </div>
     </div>

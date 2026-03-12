@@ -182,7 +182,7 @@ const Income = {
         card.className = 'income-card';
         card.dataset.incomeId = income.id;
 
-        const dateLabel = income.plannedDate === 'ALL' || !income.plannedDate ? 'ALL' : `Dia ${income.plannedDate}`;
+        const dateLabel = income.plannedDate === 'all' || !income.plannedDate ? 'all' : `Dia ${income.plannedDate}`;
 
         card.innerHTML = `
             <div class="income-description">
@@ -232,8 +232,8 @@ const Income = {
         // Initialize distribution with zeros
         for (let d = 1; d <= daysInMonth; d++) distribution[d] = 0;
 
-        // Process Recurring Incomes ("ALL")
-        const recurringIncomes = incomes.filter(i => !i.plannedDate || i.plannedDate === 'ALL');
+        // Process Recurring Incomes ("all")
+        const recurringIncomes = incomes.filter(i => !i.plannedDate || i.plannedDate === 'all');
         let dailyRecurringBase = recurringIncomes.reduce((sum, i) => sum + (i.plannedAmount || 0), 0);
 
         if (dailyRecurringBase > 0) {
@@ -274,7 +274,7 @@ const Income = {
         }
 
         // Process Dated Incomes (Specific Day)
-        const datedIncomes = incomes.filter(i => i.plannedDate && i.plannedDate !== 'ALL');
+        const datedIncomes = incomes.filter(i => i.plannedDate && i.plannedDate !== 'all');
         for (const income of datedIncomes) {
             const day = Number(income.plannedDate);
             if (day >= 1 && day <= daysInMonth) {
@@ -308,12 +308,12 @@ const Income = {
         }
 
         // Validate plannedDate
-        if (income.plannedDate !== 'ALL') {
+        if (income.plannedDate !== 'all') {
             const day = Number(income.plannedDate);
             const daysInMonth = DataStore.currentMonth ? getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month) : 31;
 
             if (isNaN(day) || day < 1 || day > daysInMonth) {
-                errors.push(`Dia previsto deve ser "ALL" ou um dia válido entre 1 e ${daysInMonth}`);
+                errors.push(`Dia previsto deve ser "all" ou um dia válido entre 1 e ${daysInMonth}`);
             }
         }
 
@@ -341,12 +341,12 @@ const Income = {
                 }
             } else {
                 // Received Date is MISSING
-                if (income.plannedDate !== 'ALL') {
+                if (income.plannedDate !== 'all') {
                     // It is mandatory for specific-date incomes
                     errors.push('Data do Recebimento é obrigatória para receitas pontuais com valor recebido.');
                 }
 
-                // If it was 'ALL', we wouldn't be here ideally because fields are blocked, 
+                // If it was 'all', we wouldn't be here ideally because fields are blocked, 
                 // but if we are, we don't strictly enforce date because it's average, 
                 // OR we enforce that it shouldn't be here. 
                 // But the requirement says "No caso caso de receita recebida relativa a uma receita esperada pontual... o app deve também requisitar a entrada da data".

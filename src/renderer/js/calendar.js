@@ -154,7 +154,7 @@ const Calendar = {
 
         // Render summary
         const expenseTotal = data.totalPlanned || 0;
-        const paidTotal = data.totalPaid || 0;
+        const paidTotal = DataStore.currentMonth.dailyActualExpense?.[day] || 0;
         const actualIncome = DataStore.currentMonth.dailyActualIncome?.[day] || 0;
         const fluxPlan = data.income - expenseTotal;
         const fluxEfetivo = actualIncome - paidTotal;
@@ -210,43 +210,11 @@ const Calendar = {
         return expenses.slice(0, limit).map(expense => {
             // Logic for coloring Planned Amount background
             let amountBgClass = '';
-            const isPaid = expense.paidDate !== null && expense.paidDate !== undefined;
-            const paidAmount = expense.paidAmount || 0;
-            const isPartial = paidAmount > 0 && paidAmount < expense.plannedAmount;
-
-            // Payment date logic for "Late"
-            let isLate = false;
-            if (isPaid) {
-                const paidDateStr = String(expense.paidDate);
-                if (paidDateStr.includes('/')) {
-                    // Different month case - always considered late for simplicity or different month
-                    // (The prompt says: "In case payment is made late, in another month...")
-                    isLate = true;
-                } else {
-                    const paidDay = parseInt(paidDateStr);
-                    if (!isNaN(paidDay) && paidDay > expense.plannedDate) {
-                        isLate = true;
-                    }
-                }
-            }
-
-            // Determine background color
-            if (!isPaid) {
-                // Check if due date passed
-                const dueDate = new Date(currentYear, currentMonth - 1, expense.plannedDate);
-                if (dueDate < today) {
-                    amountBgClass = 'bg-bright-red';
-                }
-            } else {
-                if (isPartial || isLate) {
-                    amountBgClass = 'bg-bright-yellow';
-                }
-            }
-
-            // Handle date display
-            let dateDisplay = '-';
-            if (isPaid) {
-                dateDisplay = expense.paidDate;
+            
+            // Check if due date passed (simplistic check for planned vs today)
+            const dueDate = new Date(currentYear, currentMonth - 1, expense.plannedDate);
+            if (dueDate < today) {
+                amountBgClass = 'bg-bright-red';
             }
 
             return `
@@ -256,10 +224,6 @@ const Calendar = {
                             ${expense.description}
                         </span>
                         <span class="amount ${amountBgClass}">${formatCurrency(expense.plannedAmount)}</span>
-                    </div>
-                    <div class="line-b">
-                        <span class="payment-status">Pago: ${dateDisplay}</span>
-                        <span class="amount">${formatCurrency(paidAmount)}</span>
                     </div>
                 </div>
             `;

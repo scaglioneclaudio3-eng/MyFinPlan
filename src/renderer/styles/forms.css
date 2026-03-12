@@ -216,21 +216,29 @@
     padding-bottom: 0;
 }
 
-/* Daily Income Panel */
+/* Daily Income/Expense Panels */
 .daily-income-panel {
-    grid-area: daily;
+    grid-area: daily_inc;
     background-color: #007bff;
-    /* Regular Blue */
     border-radius: var(--border-radius);
     padding: var(--spacing-sm);
-    /* Reduced from md */
     margin-top: 0;
-    /* Removed margin to be closer to expenses */
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
 }
 
-.daily-income-panel .panel-header {
+.daily-expense-panel {
+    grid-area: daily_exp;
+    background-color: #007bff;
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm);
+    margin-top: 0;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.daily-income-panel .panel-header,
+.daily-expense-panel .panel-header {
     margin-bottom: var(--spacing-sm);
     background-color: transparent;
     border-bottom: 1px solid var(--border-color);

@@ -242,10 +242,20 @@
                         <small>-1: Atrasado, 0: Futuro, 1-31: Dia, all: Diária, fds: Fins de Semana</small>
                     </div>
                 </div>
+                <!-- NOVO: Campos bloqueados para receber do painel de efetivos diários -->
+                <div class="form-row" id="expense-paid-row">
+                    <div class="form-group">
+                        <label for="expense-paid-amount">Valor Pago Efetivo Diário (R$)</label>
+                        <input type="text" id="expense-paid-amount" readonly title="Preenchido via Quadro de Despesas Efetivas Diárias" style="background-color: var(--bg-tertiary); color: var(--text-muted); cursor: not-allowed; border-color: transparent;">
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-paid-dates">Dia(s) Pago(s)</label>
+                        <input type="text" id="expense-paid-dates" readonly title="Preenchido via Quadro de Despesas Efetivas Diárias" style="background-color: var(--bg-tertiary); color: var(--text-muted); cursor: not-allowed; border-color: transparent;">
+                    </div>
+                </div>
                 <div class="form-row">
                     <div class="form-group">
-                <div class="form-group">
-                    <label for="expense-special-type">Especifique abaixo, se despesa trabalhista</label>
+                        <label for="expense-special-type">Especifique abaixo, se despesa trabalhista</label>
                     <select id="expense-special-type">
                         <option value="">Não é trabalhista</option>
                         <option value="SALARY_ADVANCE">Adiantamento Salarial (Dia 20)</option>
@@ -262,6 +272,7 @@
                         <input type="checkbox" id="expense-is-template">
                         Usar como modelo para próximos meses
                     </label>
+                </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-danger" id="delete-expense-btn"

@@ -1,3 +1,25 @@
+INTRODUÇÃO
+
+
+Este aplicativo não é ferramenta contábil, é um controle e acompanhamento gerencial de despesas e receitas mensais, previstas e efetivas. 
+
+
+O usuário deve inserir as descrições de suas despesas previstas, dentro de categorias criadas pelo próprio usuário, os respectivos custos e datas de vencimento, assim como inserir a previsão de receitas, que podem ser médias de receitas diárias (que o usuário estima para o mês e insere para todos os dias do mês com data “ALL”), complementadas por receitas específicas com datas previstas (como a venda de um veículo, por exemplo). 
+
+
+O aplicativo possibilita usar porcentagens diferenciadas da receita média diária nos fins de semana e feriados, e adiciona essas receitas no fluxo de caixa do primeiro dia útil subsequente, (como ocorre com receitas de cartões em fins de semana e feriados). 
+
+
+O aplicativo não gera fluxos exatos, mas aproximados, pois as receitas em dinheiro ou PIX em fins de semana e feriados são transferidas para o primeiro dia útil subsequente. O objetivo do aplicativo é promover um entendimento rápido das disponibilidades diárias da pessoa física ou da empresa, uma visão mensal das despesas e receitas e replicar as descrições e datas de vencimento das despesas recorrentes nos meses futuros, facilitando as futuras entradas mensais das despesas diárias.  
+
+
+Durante o mês o usuário insere diariamente as despesas pagas e as receitas efetivas. O aplicativo apresenta um calendário mensal com o resumo financeiro do dia: despesas previstas, despesas pagas, receitas previstas, receitas recebidas e os saldos previsto e efetivo. 
+
+
+Além do acompanhamento diário no calendário mensal, o aplicativo apresenta um gráfico com os acumulados de despesas previstas, despesas pagas, receitas previstas, receitas recebidas e os saldos previstos e efetivos.
+
+
+
 1. Adicionando Despesas
 Clique no botão + ao lado de uma categoria para adicionar uma nova despesa. Preencha a descrição, valor previsto e dia de vencimento.
 
@@ -24,12 +46,12 @@ Receitas previstas e efetivas em fins de semana e feriados são inseridas pelo A
 8. Receitas Previstas Recorrentes (ALL)
 Receitas previstas definidas com dia "all" são médias previstas pelo usuário e se aplicam a todos os dias do mês, e sábados, domingos e feriados seguem porcentagens dessas receitas, conforme o especificado em configurações.
 
-9. Renda Efetiva Diária
+9. Receita Efetiva Diária
 No final da página de Lançamentos, há uma grade com todos os dias do mês. Digite aqui o valor que efetivamente entrou em conta em cada dia. Estes campos possuem fundo azul.
 
 10. Configurações
 No menu Configurações você pode ajustar:
-a) porcentagem de renda recebida em fins de semana;
+a) porcentagem de receita recebida em fins de semana;
 b) transferência automática para o primeiro dia útil subsequente;
 c) localização para feriados;
 d) frequência de backup.

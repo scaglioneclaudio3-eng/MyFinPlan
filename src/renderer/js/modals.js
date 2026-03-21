@@ -93,9 +93,31 @@ const Modals = {
             document.getElementById('expense-special-type').value = expense.specialType || '';
             deleteBtn.style.display = 'block';
             title.textContent = 'Editar Lançamento';
+
+            // Calculator para Valor Efetivo Pago e Dias
+            let totalPaid = 0;
+            let paidDays = [];
+            const details = DataStore.currentMonth?.dailyActualExpenseDetails || {};
+            for (const [dayKey, catData] of Object.entries(details)) {
+                let dayHasPayment = false;
+                for (const catArray of Object.values(catData)) {
+                    for (const item of catArray) {
+                        if (item.expenseId === expense.id) {
+                            totalPaid += (item.amount || 0);
+                            dayHasPayment = true;
+                        }
+                    }
+                }
+                if (dayHasPayment) paidDays.push(dayKey);
+            }
+            
+            document.getElementById('expense-paid-amount').value = totalPaid > 0 ? totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+            document.getElementById('expense-paid-dates').value = paidDays.length > 0 ? paidDays.join(', ') : '';
         } else {
             title.textContent = 'Nova Despesa';
             deleteBtn.style.display = 'none';
+            document.getElementById('expense-paid-amount').value = '';
+            document.getElementById('expense-paid-dates').value = '';
         }
 
         this.open('expense-modal');
@@ -198,6 +220,8 @@ const Modals = {
         if (income) {
             document.getElementById('income-id').value = income.id;
             document.getElementById('income-description').readOnly = false;
+            document.getElementById('income-planned-amount').readOnly = false;
+            document.getElementById('income-planned-date').readOnly = false;
             document.getElementById('income-description').value = income.description;
 
             // Format numbers for text input (comma as decimal)
@@ -216,6 +240,9 @@ const Modals = {
 
             plannedDateVal = income.plannedDate;
         } else {
+            document.getElementById('income-planned-date').readOnly = false;
+            document.getElementById('income-planned-amount').readOnly = false;
+            document.getElementById('income-description').readOnly = false;
             document.getElementById('income-planned-date').value = ''; // Default for new income (empty allows editing)
             plannedDateVal = '';
         }
@@ -362,7 +389,7 @@ const Modals = {
 
             const categories = [...DataStore.categories].sort((a, b) => a.order - b.order);
             const expensesByDay = DataStore.getExpensesByDay();
-            const plannedForDay = expensesByDay[day]?.expenses || [];
+            const allMonthExpenses = DataStore.currentMonth.expenses || [];
             
             if(!DataStore.currentMonth.dailyActualExpenseDetails) {
                 DataStore.currentMonth.dailyActualExpenseDetails = {};
@@ -370,7 +397,7 @@ const Modals = {
             const existingDetails = DataStore.currentMonth.dailyActualExpenseDetails[day] || {};
 
             categories.forEach(cat => {
-                const catPlanned = plannedForDay.filter(e => e.categoryId === cat.id);
+                const catPlanned = allMonthExpenses.filter(e => e.categoryId === cat.id);
                 const catActuals = existingDetails[cat.id] || [];
 
 

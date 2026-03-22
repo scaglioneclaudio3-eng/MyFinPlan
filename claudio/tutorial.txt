@@ -29,7 +29,7 @@ Clique no botão + ao lado de uma categoria para adicionar uma nova despesa. Pre
 - Dia 1-31: Data normal de vencimento
 
 3. Registrando Pagamentos
-Clique em uma despesa para editar e informar o valor pago e a data do pagamento.
+Clique em uma despesa para visualizar suas informações. Os pagamentos devem ser registrados de forma rápida e diária através do quadro "Despesas Diárias Efetivas" localizado no final da página, clicando no respectivo dia para abrir a tela de detalhamento. Neste local você pode dar baixa nas despesas previstas para aquele dia ou adicionar despesas "Extras" não planejadas.
 
 4. Visualizações
 Use as abas no topo para alternar entre Lançamentos, Calendário e Gráficos.
@@ -46,8 +46,8 @@ Receitas previstas e efetivas em fins de semana e feriados são inseridas pelo A
 8. Receitas Previstas Recorrentes (ALL)
 Receitas previstas definidas com dia "all" são médias previstas pelo usuário e se aplicam a todos os dias do mês, e sábados, domingos e feriados seguem porcentagens dessas receitas, conforme o especificado em configurações.
 
-9. Receita Efetiva Diária
-No final da página de Lançamentos, há uma grade com todos os dias do mês. Digite aqui o valor que efetivamente entrou em conta em cada dia. Estes campos possuem fundo azul.
+9. Receitas e Despesas Diárias Efetivas
+No final da página de Lançamentos, há as grades interativas ("Despesas Diárias Efetivas" e "Receitas Diárias Efetivas") exibindo todos os dias do mês. Clique no dia desejado em uma das grades para abrir um popup de detalhamento. Através deste popup você informa os valores que efetivamente entraram ou saíram da conta naquele dia, consolidando/dando baixa nas previsões correspondentes, ou adicionando lançamentos "Extras/Não Previstos". As baixas realizadas por esta tela povoarão automaticamente de forma bloqueada e segura as áreas de pagamentos e recebimentos efetivos dentro das edições individuais de previsão (Despesas e Receitas).
 
 10. Configurações
 No menu Configurações você pode ajustar:

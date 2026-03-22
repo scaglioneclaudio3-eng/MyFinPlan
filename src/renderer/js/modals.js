@@ -120,6 +120,34 @@ const Modals = {
             document.getElementById('expense-paid-dates').value = '';
         }
 
+        // Manage visibility of planned fields for "Não Planejadas"
+        const activeCatId = categoryId || expense?.categoryId || '';
+        let isUnplanned = false;
+        if (activeCatId) {
+            const cat = DataStore.categories.find(c => c.id === activeCatId);
+            if (cat && cat.name.toLowerCase() === 'não planejadas') {
+                isUnplanned = true;
+            }
+        }
+
+        const plannedAmountInput = document.getElementById('expense-planned-amount');
+        const plannedDateInput = document.getElementById('expense-planned-date');
+        const plannedRow = plannedAmountInput.closest('.form-row');
+        
+        if (isUnplanned) {
+            plannedRow.style.display = 'none';
+            plannedAmountInput.required = false;
+            plannedDateInput.required = false;
+            
+            // Set some valid defaults so the form can still submit if needed
+            plannedAmountInput.value = 0;
+            plannedDateInput.value = expense?.plannedDate || 1; 
+        } else {
+            plannedRow.style.display = '';
+            plannedAmountInput.required = true;
+            plannedDateInput.required = true;
+        }
+
         this.open('expense-modal');
 
         document.getElementById('expense-description').focus();
@@ -152,57 +180,6 @@ const Modals = {
         }
     },
 
-    toggleIncomeBlocking(plannedDateValue) {
-        const receivedAmountInput = document.getElementById('income-received-amount');
-        const receivedDateInput = document.getElementById('income-received-date');
-        const plannedAmountInput = document.getElementById('income-planned-amount');
-
-        // Normalize checking: "all" is case-insensitive
-        const plannedDateStr = (plannedDateValue || '').toString().trim().toLowerCase();
-        const isAll = plannedDateStr === 'all';
-
-        // Helper for float parsing with comma support
-        const parseAmount = (val) => {
-            if (!val) return 0;
-            // Robust parsing: remove dots (thousands), replace comma (decimal)
-            return parseFloat(val.replace(/\./g, '').replace(',', '.'));
-        };
-
-        // 1. Check Planned Validity
-        const plannedAmountVal = parseAmount(plannedAmountInput.value);
-        const hasPlannedAmount = plannedAmountVal > 0;
-        const hasSpecificPlannedDate = plannedDateStr !== '' && !isAll;
-
-        // 2. Check Received Amount Validity
-        const receivedAmountVal = parseAmount(receivedAmountInput.value);
-        const hasReceivedAmount = receivedAmountVal > 0;
-
-        // Determine States
-        // Received Amount is unblocked if Planned is Valid
-        const shouldEnableAmount = hasPlannedAmount && hasSpecificPlannedDate;
-
-        // Received Date is unblocked if Amount is unblocked AND has a value
-        const shouldEnableDate = shouldEnableAmount && hasReceivedAmount;
-
-        // --- APPLY TO RECEIVED AMOUNT ---
-        if (!shouldEnableAmount) {
-            receivedAmountInput.disabled = true;
-            receivedAmountInput.title = 'Preencha a receita prevista e uma data específica primeiro.';
-        } else {
-            receivedAmountInput.disabled = false;
-            receivedAmountInput.title = '';
-        }
-
-        // --- APPLY TO RECEIVED DATE ---
-        if (!shouldEnableDate) {
-            receivedDateInput.disabled = true;
-            receivedDateInput.title = 'Preencha o valor recebido primeiro.';
-        } else {
-            receivedDateInput.disabled = false;
-            receivedDateInput.title = '';
-        }
-    },
-
     /**
      * Opens the Income modal
      * @param {Object} income - Income data to edit (optional)
@@ -213,9 +190,6 @@ const Modals = {
         document.getElementById('income-id').value = '';
         document.getElementById('income-modal-title').textContent = income ? 'Editar Receita' : 'Nova Receita';
         document.getElementById('delete-income-btn').style.display = income ? 'block' : 'none';
-
-        // Prepare initial values
-        let plannedDateVal = 'all';
 
         if (income) {
             document.getElementById('income-id').value = income.id;
@@ -234,24 +208,34 @@ const Modals = {
             document.getElementById('income-planned-amount').value = formatForInput(income.plannedAmount);
             document.getElementById('income-planned-date').value = income.plannedDate;
 
-            // Values for received might be overwritten by blocking logic if date is ALL
-            document.getElementById('income-received-amount').value = formatForInput(income.receivedAmount);
-            document.getElementById('income-received-date').value = income.receivedDate || '';
-
-            plannedDateVal = income.plannedDate;
+            // Calculator para Valor Efetivo Recebido e Dias
+            let totalReceived = 0;
+            let receivedDays = [];
+            const details = DataStore.currentMonth?.dailyActualIncomeDetails || {};
+            for (const [dayKey, itemsArray] of Object.entries(details)) {
+                let dayHasReceipt = false;
+                for (const item of itemsArray) {
+                    if (item.incomeId === income.id) {
+                        totalReceived += (item.amount || 0);
+                        dayHasReceipt = true;
+                    }
+                }
+                if (dayHasReceipt) receivedDays.push(dayKey);
+            }
+            
+            document.getElementById('income-received-amount').value = totalReceived > 0 ? totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+            document.getElementById('income-received-date').value = receivedDays.length > 0 ? receivedDays.join(', ') : '';
         } else {
             document.getElementById('income-planned-date').readOnly = false;
             document.getElementById('income-planned-amount').readOnly = false;
             document.getElementById('income-description').readOnly = false;
             document.getElementById('income-planned-date').value = ''; // Default for new income (empty allows editing)
-            plannedDateVal = '';
+            document.getElementById('income-received-amount').value = '';
+            document.getElementById('income-received-date').value = '';
         }
 
         this.open('income-modal');
         document.getElementById('income-description').focus();
-
-        // Apply blocking logic immediately
-        this.toggleIncomeBlocking(plannedDateVal);
     },
 
     /**
@@ -283,7 +267,6 @@ const Modals = {
         const modal = document.getElementById('daily-income-details-modal');
         const title = document.getElementById('daily-income-details-title');
         const container = document.getElementById('daily-income-entries');
-        const addBtn = document.getElementById('add-daily-entry-btn');
         const saveBtn = document.getElementById('save-daily-income-btn');
 
         // Date Validation
@@ -301,7 +284,6 @@ const Modals = {
 
         // Reset modal state
         modal.classList.remove('read-only-mode');
-        addBtn.style.display = 'inline-block';
         saveBtn.style.display = 'inline-block';
         if (document.getElementById('daily-income-warning')) {
             document.getElementById('daily-income-warning').remove();
@@ -310,7 +292,6 @@ const Modals = {
         if (isFuture) {
             title.textContent = `Detalhamento (Somente Leitura - Data Futura)`;
             modal.classList.add('read-only-mode');
-            addBtn.style.display = 'none';
             saveBtn.style.display = 'none';
 
             // Add warning
@@ -328,26 +309,105 @@ const Modals = {
             title.textContent = `Detalhamento da Receita do Dia ${day}/${DataStore.currentMonth.month}`;
         }
 
-        container.innerHTML = '';
+        const allMonthIncomes = DataStore.currentMonth.incomes || [];
+        
+        if (!DataStore.currentMonth.dailyActualIncomeDetails) {
+            DataStore.currentMonth.dailyActualIncomeDetails = {};
+        }
+        const existingDetails = DataStore.currentMonth.dailyActualIncomeDetails[day] || [];
 
-        const details = DataStore.currentMonth.dailyActualIncomeDetails?.[day] || [];
+        let html = `
+            <div class="expense-detail-category-group category-card expanded" style="margin-bottom: 15px; border-left: 6px solid #4a90d9;">
+                <div class="category-header" style="cursor: default;">
+                    <span class="category-color" style="background-color: #4a90d9"></span>
+                    <span class="category-name">Receitas Planejadas / Extras</span>
+                </div>
+                <div class="category-expenses" style="display: block;">
+                    <table class="expense-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Descrição da Receita</th>
+                                <th class="amount" style="width: 140px;">Valor Efetivo (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="planned-incomes-tbody">
+        `;
 
-        if (details.length === 0 && !isFuture) {
-            this.addDailyIncomeEntryRow(); // Add one empty row by default
-        } else if (details.length === 0 && isFuture) {
-            container.innerHTML = '<p class="text-center text-muted" style="padding: 20px;">Nenhum registro.</p>';
-        } else {
-            details.forEach(entry => this.addDailyIncomeEntryRow(entry));
+        allMonthIncomes.forEach(plannedInc => {
+            const savedActual = existingDetails.find(a => a.incomeId === plannedInc.id);
+            const actualValue = savedActual ? savedActual.amount : '';
+            html += `
+                <tr class="expense-detail-row planned-income" data-income-id="${plannedInc.id}">
+                    <td>${plannedInc.description} <span style="font-size: 10px; color: #aaa;">(${plannedInc.plannedDate === 'all' ? 'Freq.' : `${plannedInc.plannedDate}`})</span></td>
+                    <td class="amount">
+                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${actualValue}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                    </td>
+                </tr>
+            `;
+        });
+
+        const extraActuals = existingDetails.filter(a => a.isExtra);
+        extraActuals.forEach(extra => {
+            html += `
+                <tr class="expense-detail-row extra-income">
+                    <td>
+                        <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" value="${extra.description}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                    </td>
+                    <td class="amount">
+                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${extra.amount}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+        container.querySelectorAll('.actual-amount-input').forEach(input => {
+            input.addEventListener('input', () => this.updateDailyIncomeModalTotal());
+        });
+
+        if (!isFuture) {
+            const globalAddExtraBtn = document.createElement('button');
+            globalAddExtraBtn.type = 'button';
+            globalAddExtraBtn.className = 'btn btn-outline btn-sm global-add-unplanned-btn';
+            globalAddExtraBtn.style = 'margin-top: 15px; width: 100%; padding: 10px; font-weight: bold; border-style: dashed; border-radius: 8px;';
+            globalAddExtraBtn.innerHTML = '+ Adicionar Outras Receitas Não Previstas';
+            container.appendChild(globalAddExtraBtn);
+
+            const unplannedContainer = document.createElement('div');
+            unplannedContainer.id = 'unplanned-new-incomes-container';
+            unplannedContainer.style = 'margin-top: 10px;';
+            container.appendChild(unplannedContainer);
+
+            globalAddExtraBtn.addEventListener('click', () => {
+                const extraDiv = document.createElement('div');
+                extraDiv.className = 'expense-detail-row global-extra-income';
+                extraDiv.style = 'display: flex; margin-bottom: 8px; align-items: center; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px;';
+                extraDiv.innerHTML = `
+                    <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Não Prevista)" style="flex: 1; margin-right: 10px; padding: 6px;">
+                    <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="Valor Efetivo" style="width: 130px; margin-right: 10px; padding: 6px;">
+                    <button type="button" class="btn-remove-global-extra" title="Remover" style="background: none; border: none; font-size: 1.5em; color: var(--danger-color); cursor: pointer;">&times;</button>
+                `;
+                
+                extraDiv.querySelector('.btn-remove-global-extra').addEventListener('click', () => {
+                    extraDiv.remove();
+                    this.updateDailyIncomeModalTotal();
+                });
+                extraDiv.querySelector('.actual-amount-input').addEventListener('input', () => this.updateDailyIncomeModalTotal());
+
+                unplannedContainer.appendChild(extraDiv);
+                extraDiv.querySelector('.extra-desc-input').focus();
+            });
         }
 
-        // If future, disable existing inputs
-        if (isFuture) {
-            const inputs = container.querySelectorAll('input');
-            inputs.forEach(input => input.disabled = true);
-            const removeBtns = container.querySelectorAll('.btn-remove-entry');
-            removeBtns.forEach(btn => btn.style.display = 'none');
-        }
-
+        this.updateDailyIncomeModalTotal();
         this.open('daily-income-details-modal');
     },
 
@@ -361,11 +421,21 @@ const Modals = {
         document.getElementById('daily-expense-modal-total').textContent = formatCurrency(total);
     },
 
+    updateDailyIncomeModalTotal() {
+        let total = 0;
+        const modal = document.getElementById('daily-income-details-modal');
+        if (modal) {
+            modal.querySelectorAll('.actual-amount-input').forEach(input => {
+                const val = parseFloat(input.value) || 0;
+                total += val;
+            });
+            const totalSpan = document.getElementById('daily-income-modal-total');
+            if (totalSpan) totalSpan.textContent = formatCurrency(total);
+        }
+    },
+
     async openDailyExpenseDetailsModal(day) {
         try {
-            if (window.api && window.api.showMessage) {
-                await window.api.showMessage('INICIO DA FUNCAO DE ABRIR', 'info');
-            }
             const modal = document.getElementById('daily-expense-details-modal');
             const title = document.getElementById('daily-expense-details-title');
             const container = document.getElementById('daily-expense-categories-container');
@@ -400,102 +470,114 @@ const Modals = {
                 const catPlanned = allMonthExpenses.filter(e => e.categoryId === cat.id);
                 const catActuals = existingDetails[cat.id] || [];
 
+                // Skip rendering if category has no planned expenses today and we are in future (read-only)
+                if (isFuture && catPlanned.length === 0 && catActuals.length === 0) return;
 
-            // Skip rendering if category has no planned expenses today and we are in future (read-only)
-            if (isFuture && catPlanned.length === 0 && catActuals.length === 0) return;
+                const catDiv = document.createElement('div');
+                catDiv.className = 'expense-detail-category-group category-card expanded';
+                catDiv.dataset.categoryId = cat.id;
+                catDiv.style = `margin-bottom: 15px; border-left: 6px solid ${cat.color};`;
 
-            const catDiv = document.createElement('div');
-            catDiv.className = 'expense-detail-category-group';
-            catDiv.style = `border-left: 6px solid ${cat.color}; padding-left: 10px; margin-bottom: 20px; background-color: var(--bg-secondary); padding: 10px; border-radius: var(--border-radius);`;
-            
-            let html = `<h4 style="margin-top: 0; margin-bottom: 10px; color: ${cat.color};">${cat.name}</h4>`;
-            html += `<div class="planned-items-container" data-cat-id="${cat.id}">`;
+                let html = `
+                    <div class="category-header" style="cursor: default;">
+                        <span class="category-color" style="background-color: ${cat.color}"></span>
+                        <span class="category-name">${cat.name}</span>
+                    </div>
+                    <div class="category-expenses" style="display: block;">
+                        <table class="expense-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Descrição</th>
+                                    <th class="amount" style="width: 140px;">Valor Pago (R$)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="planned-items-container" data-cat-id="${cat.id}">
+                `;
 
-            catPlanned.forEach(plannedExp => {
-                const savedActual = catActuals.find(a => a.expenseId === plannedExp.id);
-                const actualValue = savedActual ? savedActual.amount : '';
+                catPlanned.forEach(plannedExp => {
+                    const savedActual = catActuals.find(a => a.expenseId === plannedExp.id);
+                    const actualValue = savedActual ? savedActual.amount : '';
+                    html += `
+                        <tr class="expense-detail-row planned-expense" data-expense-id="${plannedExp.id}">
+                            <td>${plannedExp.description}</td>
+                            <td class="amount">
+                                <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${actualValue}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                const extraActuals = catActuals.filter(a => a.isExtra);
+                extraActuals.forEach(extra => {
+                    html += `
+                        <tr class="expense-detail-row extra-expense">
+                            <td>
+                                <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" value="${extra.description}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                            </td>
+                            <td class="amount">
+                                <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${extra.amount}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                            </td>
+                        </tr>
+                    `;
+                });
+
                 html += `
-                    <div class="expense-detail-row planned-expense" data-expense-id="${plannedExp.id}" style="display: flex; margin-bottom: 8px; align-items: center;">
-                        <span style="flex: 1; padding-right: 10px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${plannedExp.description} <small class="text-muted">(Prev: ${formatCurrency(plannedExp.plannedAmount)})</small></span>
-                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="Valor Pago (R$)" value="${actualValue}" style="width: 130px; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                            </tbody>
+                        </table>
                     </div>
                 `;
-            });
-
-            const extraActuals = catActuals.filter(a => a.isExtra);
-            extraActuals.forEach(extra => {
-                html += `
-                    <div class="expense-detail-row extra-expense" style="display: flex; margin-bottom: 8px; align-items: center;">
-                        <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" value="${extra.description}" style="flex: 1; margin-right: 10px; padding: 4px;" ${isFuture ? 'disabled' : ''}>
-                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="Valor Pago (R$)" value="${extra.amount}" style="width: 130px; margin-right: 10px; padding: 4px;" ${isFuture ? 'disabled' : ''}>
-                        ${!isFuture ? `<button type="button" class="btn-remove-extra" title="Remover" style="background: none; border: none; font-size: 1.2em; color: var(--danger-color); cursor: pointer;">&times;</button>` : ''}
-                    </div>
-                `;
-            });
-
-            html += `</div>`;
-            if (!isFuture) {
-                html += `<button type="button" class="btn btn-outline btn-sm add-extra-btn" style="margin-top: 10px; padding: 4px 8px;">+ Adicionar Extra</button>`;
-            }
-            
-            catDiv.innerHTML = html;
-            container.appendChild(catDiv);
-
-            if (!isFuture) {
-                const addExtraBtn = catDiv.querySelector('.add-extra-btn');
-                const itemsContainer = catDiv.querySelector('.planned-items-container');
                 
-                addExtraBtn.addEventListener('click', () => {
+                catDiv.innerHTML = html;
+                
+                catDiv.querySelectorAll('.actual-amount-input').forEach(input => {
+                    input.addEventListener('input', () => this.updateDailyExpenseModalTotal());
+                });
+
+                container.appendChild(catDiv);
+            });
+
+            if (!isFuture) {
+                const globalAddExtraBtn = document.createElement('button');
+                globalAddExtraBtn.type = 'button';
+                globalAddExtraBtn.className = 'btn btn-outline btn-sm global-add-unplanned-btn';
+                globalAddExtraBtn.style = 'margin-top: 15px; width: 100%; padding: 10px; font-weight: bold; border-style: dashed; border-radius: 8px;';
+                globalAddExtraBtn.innerHTML = '+ Adicionar Nova Despesa Não Planejada';
+                container.appendChild(globalAddExtraBtn);
+
+                const unplannedContainer = document.createElement('div');
+                unplannedContainer.id = 'unplanned-new-entries-container';
+                unplannedContainer.style = 'margin-top: 10px;';
+                container.appendChild(unplannedContainer);
+
+                globalAddExtraBtn.addEventListener('click', () => {
                     const extraDiv = document.createElement('div');
-                    extraDiv.className = 'expense-detail-row extra-expense';
-                    extraDiv.style = `display: flex; margin-bottom: 8px; align-items: center;`;
+                    extraDiv.className = 'expense-detail-row global-extra-expense';
+                    extraDiv.style = 'display: flex; margin-bottom: 8px; align-items: center; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px;';
                     extraDiv.innerHTML = `
-                        <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" style="flex: 1; margin-right: 10px; padding: 4px;">
-                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="Valor Pago" style="width: 130px; margin-right: 10px; padding: 4px;">
-                        <button type="button" class="btn-remove-extra" title="Remover" style="background: none; border: none; font-size: 1.2em; color: var(--danger-color); cursor: pointer;">&times;</button>
+                        <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Não Planejada)" style="flex: 1; margin-right: 10px; padding: 6px;">
+                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="Valor Pago" style="width: 130px; margin-right: 10px; padding: 6px;">
+                        <button type="button" class="btn-remove-global-extra" title="Remover" style="background: none; border: none; font-size: 1.5em; color: var(--danger-color); cursor: pointer;">&times;</button>
                     `;
                     
-                    extraDiv.querySelector('.btn-remove-extra').addEventListener('click', () => {
+                    extraDiv.querySelector('.btn-remove-global-extra').addEventListener('click', () => {
                         extraDiv.remove();
                         this.updateDailyExpenseModalTotal();
                     });
                     extraDiv.querySelector('.actual-amount-input').addEventListener('input', () => this.updateDailyExpenseModalTotal());
 
-                    itemsContainer.appendChild(extraDiv);
+                    unplannedContainer.appendChild(extraDiv);
                     extraDiv.querySelector('.extra-desc-input').focus();
                 });
-
-                catDiv.querySelectorAll('.btn-remove-extra').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        e.target.closest('.extra-expense').remove();
-                        this.updateDailyExpenseModalTotal();
-                    });
-                });
-
-                catDiv.querySelectorAll('.actual-amount-input').forEach(input => {
-                    input.addEventListener('input', () => this.updateDailyExpenseModalTotal());
-                });
             }
-        });
 
         if (container.children.length === 0) {
             container.innerHTML = '<p class="text-muted text-center" style="padding: 20px;">Nenhuma categoria configurada ou dados não disponíveis.</p>';
         }
 
-        if (window.api && window.api.showMessage) {
-            await window.api.showMessage('VAI ABRIR O MODAL E ATUALIZAR TOTAL', 'info');
-        }
         this.updateDailyExpenseModalTotal();
         this.open('daily-expense-details-modal');
 
         const computedStyle = window.getComputedStyle(modal);
-        if (window.api && window.api.showMessage) {
-            await window.api.showMessage('FIM DA FUNCAO. DISPLAY DO MODAL: ' + computedStyle.display + '\nzIndex: ' + computedStyle.zIndex, 'info');
-        }
-
-        if (computedStyle.display === 'none' && window.api && window.api.showMessage) {
-            await window.api.showMessage('Aviso interno: O modal existe, as categorias foram renderizadas, a classe .show (' + modal.className + ') foi aplicada, mas o CSS getComputedStyle(modal).display ainda é "none" ou algo falhou.', 'error');
-        }
 
         } catch (e) {
             console.error(e);
@@ -505,27 +587,7 @@ const Modals = {
         }
     },
 
-    /**
-     * Adds a row to the daily income details modal
-     * @param {Object|null} entry - Entry data { description, amount }
-     */
-    addDailyIncomeEntryRow(entry = null) {
-        const container = document.getElementById('daily-income-entries');
-        const row = document.createElement('div');
-        row.className = 'daily-income-entry-row';
 
-        row.innerHTML = `
-            <input type="text" class="entry-description" placeholder="Descrição" value="${entry?.description || ''}">
-            <input type="number" step="0.01" class="entry-amount" placeholder="Valor" value="${entry?.amount || ''}">
-            <button type="button" class="btn-remove-entry" title="Remover">&times;</button>
-        `;
-
-        row.querySelector('.btn-remove-entry').addEventListener('click', () => {
-            row.remove();
-        });
-
-        container.appendChild(row);
-    },
 
     /**
      * Opens the copy month modal
@@ -615,24 +677,7 @@ const Modals = {
             this.toggleExpenseBlocking();
         });
 
-        // Listen for changes in income planned date to toggle blocking
-        // Listen for changes in income planned date to toggle blocking
-        document.getElementById('income-planned-date').addEventListener('input', (e) => {
-            this.toggleIncomeBlocking(e.target.value);
-        });
-
-        // Listen for changes in income planned amount to toggle blocking
-        document.getElementById('income-planned-amount').addEventListener('input', (e) => {
-            // We need to pass the current date value to the toggle function
-            const dateValue = document.getElementById('income-planned-date').value;
-            this.toggleIncomeBlocking(dateValue);
-        });
-
-        // Listen for changes in income received amount to toggle blocking (for date field)
-        document.getElementById('income-received-amount').addEventListener('input', (e) => {
-            const dateValue = document.getElementById('income-planned-date').value;
-            this.toggleIncomeBlocking(dateValue);
-        });
+        // Block deleted - no toggling income blocking anymore
 
         // --- Enter Key Validation Listeners for Income ---
 
@@ -658,27 +703,7 @@ const Modals = {
             }
         });
 
-        // 3. Received Amount -> Check Date
-        document.getElementById('income-received-amount').addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                if (e.target.value && !document.getElementById('income-received-date').value) {
-                    await window.api.showMessage('por favor insira a data', 'warning');
-                    document.getElementById('income-received-date').focus();
-                }
-            }
-        });
-
-        // 4. Received Date -> Check Amount
-        document.getElementById('income-received-date').addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                if (e.target.value && !document.getElementById('income-received-amount').value) {
-                    await window.api.showMessage('por favor insira a receita', 'warning');
-                    document.getElementById('income-received-amount').focus();
-                }
-            }
-        });
+        // Check deleted - No received enter key validation anymore
 
         // Expense form submission
         document.getElementById('expense-form').addEventListener('submit', async (e) => {
@@ -944,25 +969,6 @@ const Modals = {
         });
 
         // Daily Income Details logic
-        document.getElementById('add-daily-entry-btn').addEventListener('click', async () => {
-            const container = document.getElementById('daily-income-entries');
-            const rows = container.querySelectorAll('.daily-income-entry-row');
-
-            // Check if last row is filled
-            if (rows.length > 0) {
-                const lastRow = rows[rows.length - 1];
-                const desc = lastRow.querySelector('.entry-description').value.trim();
-                const amount = lastRow.querySelector('.entry-amount').value;
-
-                if (!desc || !amount) {
-                    await window.api.showMessage('Adição não permitida antes de completar os campos anteriores', 'warning');
-                    return;
-                }
-            }
-
-            this.addDailyIncomeEntryRow();
-        });
-
         document.getElementById('save-daily-income-btn').addEventListener('click', async () => {
             const saveBtn = document.getElementById('save-daily-income-btn');
             try {
@@ -971,20 +977,65 @@ const Modals = {
 
                 const modal = document.getElementById('daily-income-details-modal');
                 const day = parseInt(modal.dataset.day);
-                const container = document.getElementById('daily-income-entries');
-                const rows = container.querySelectorAll('.daily-income-entry-row');
+                
+                const entriesToSave = [];
+                let totalDaySum = 0;
 
-                const entries = [];
-                rows.forEach(row => {
-                    const description = row.querySelector('.entry-description').value.trim();
-                    const amount = parseFloat(row.querySelector('.entry-amount').value) || 0;
-
-                    if (description || amount > 0) {
-                        entries.push({ description, amount });
+                modal.querySelectorAll('.planned-income').forEach(row => {
+                    const incId = row.dataset.incomeId;
+                    const amount = parseFloat(row.querySelector('.actual-amount-input').value);
+                    if (!isNaN(amount) && amount > 0) {
+                        entriesToSave.push({ incomeId: incId, amount: amount });
+                        totalDaySum += amount;
                     }
                 });
 
-                const savePromise = DataStore.updateDailyIncomeDetails(day, entries);
+                modal.querySelectorAll('.extra-income').forEach(row => {
+                    const desc = row.querySelector('.extra-desc-input').value.trim();
+                    const amount = parseFloat(row.querySelector('.actual-amount-input').value);
+                    if (!isNaN(amount) && amount > 0) {
+                        entriesToSave.push({ description: desc || 'Receita Extra', amount: amount, isExtra: true });
+                        totalDaySum += amount;
+                    }
+                });
+
+                const globalExtras = document.querySelectorAll('#unplanned-new-incomes-container .global-extra-income');
+                if (globalExtras.length > 0) {
+                    for (const row of globalExtras) {
+                        const desc = row.querySelector('.extra-desc-input').value.trim();
+                        const amount = parseFloat(row.querySelector('.actual-amount-input').value);
+                        if (!isNaN(amount) && amount > 0) {
+                            const descFinal = desc || 'Receita Não Prevista';
+
+                            const newInc = await DataStore.addIncome({
+                                description: descFinal,
+                                plannedAmount: 0,
+                                plannedDate: day,
+                                receivedAmount: null,
+                                receivedDate: null
+                            });
+                            
+                            entriesToSave.push({
+                                incomeId: newInc.id,
+                                amount: amount
+                            });
+                            
+                            totalDaySum += amount;
+                        }
+                    }
+                }
+
+                if (!DataStore.currentMonth.dailyActualIncomeDetails) {
+                    DataStore.currentMonth.dailyActualIncomeDetails = {};
+                }
+                if (!DataStore.currentMonth.dailyActualIncome) {
+                    DataStore.currentMonth.dailyActualIncome = {};
+                }
+
+                DataStore.currentMonth.dailyActualIncomeDetails[day] = entriesToSave;
+                DataStore.currentMonth.dailyActualIncome[day] = totalDaySum;
+
+                const savePromise = DataStore.saveMonth();
                 const timeoutPromise = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('Tempo limite excedido ao salvar')), 5000)
                 );
@@ -1045,6 +1096,40 @@ const Modals = {
                         detailsToSave[catId] = catItems;
                     }
                 });
+
+                const globalExtras = document.querySelectorAll('#unplanned-new-entries-container .global-extra-expense');
+                if (globalExtras.length > 0) {
+                    let unplannedCat = DataStore.categories.find(c => c.name.toLowerCase() === 'não planejadas');
+                    if (!unplannedCat) {
+                        unplannedCat = await DataStore.addCategory({ name: 'Não Planejadas', color: '#e74c3c' });
+                    }
+
+                    for (const row of globalExtras) {
+                        const desc = row.querySelector('.extra-desc-input').value.trim();
+                        const amount = parseFloat(row.querySelector('.actual-amount-input').value);
+                        if (!isNaN(amount) && amount > 0) {
+                            const descFinal = desc || 'Despesa Não Planejada';
+
+                            const newExp = await DataStore.addExpense({
+                                categoryId: unplannedCat.id,
+                                description: descFinal,
+                                plannedAmount: 0,
+                                plannedDate: day,
+                                isTemplate: false
+                            });
+                            
+                            if (!detailsToSave[unplannedCat.id]) {
+                                detailsToSave[unplannedCat.id] = [];
+                            }
+                            detailsToSave[unplannedCat.id].push({
+                                expenseId: newExp.id,
+                                amount: amount
+                            });
+                            
+                            totalDaySum += amount;
+                        }
+                    }
+                }
 
                 if (!DataStore.currentMonth.dailyActualExpenseDetails) {
                     DataStore.currentMonth.dailyActualExpenseDetails = {};

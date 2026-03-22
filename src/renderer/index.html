@@ -311,12 +311,12 @@
 
                 <div class="form-row" id="income-received-row">
                     <div class="form-group">
-                        <label for="income-received-amount">Valor Recebido (R$)</label>
-                        <input type="text" id="income-received-amount" placeholder="0,00">
+                        <label for="income-received-amount">Valor Recebido Efetivo Diário (R$)</label>
+                        <input type="text" id="income-received-amount" readonly title="Preenchido via Quadro de Receitas Efetivas Diárias" style="background-color: var(--bg-tertiary); color: var(--text-muted); cursor: not-allowed; border-color: transparent;">
                     </div>
                     <div class="form-group">
-                        <label for="income-received-date">Dia do Recebimento</label>
-                        <input type="text" id="income-received-date" placeholder="Dia ou Dia/Mês">
+                        <label for="income-received-date">Dia(s) Recebido(s)</label>
+                        <input type="text" id="income-received-date" readonly title="Preenchido via Quadro de Receitas Efetivas Diárias" style="background-color: var(--bg-tertiary); color: var(--text-muted); cursor: not-allowed; border-color: transparent;">
                     </div>
                 </div>
 
@@ -474,21 +474,24 @@
 
     <!-- Daily Income Details Modal -->
     <div id="daily-income-details-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-lg">
             <div class="modal-header">
                 <h3 id="daily-income-details-title">Detalhamento da Receita do Dia</h3>
                 <button class="modal-close">&times;</button>
             </div>
-            <div class="modal-body">
-                <div id="daily-income-entries" class="daily-entries-list">
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                <div id="daily-income-entries">
                     <!-- Dynamic entries will be added here -->
                 </div>
-                <button type="button" id="add-daily-entry-btn" class="btn btn-secondary btn-sm">+ Adicionar
-                    Item</button>
             </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                <button type="button" id="save-daily-income-btn" class="btn btn-primary">Salvar</button>
+            <div class="form-actions" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: bold; font-size: 1.2em; color: var(--text-primary);">
+                    Total: <span id="daily-income-modal-total" style="color: var(--primary-color); margin-left: 8px;">R$ 0,00</span>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" id="save-daily-income-btn" class="btn btn-primary">Salvar</button>
+                </div>
             </div>
         </div>
     </div>

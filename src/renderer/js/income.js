@@ -89,75 +89,33 @@ const Income = {
                 </div>
             `;
 
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = displayValue;
-            input.dataset.day = d;
-
-            // Focus: Allow editing the current value (keep formatting or simplify?)
-            // User wants to enter with separators. So we keep the current value.
-            input.addEventListener('focus', (e) => {
-                // Determine current state logic (optional highlight selects all)
-                e.target.select();
-            });
-
-            // Blur: Save and Format
-            input.addEventListener('blur', async (e) => {
+            const valDiv = document.createElement('div');
+            valDiv.className = 'daily-income-value';
+            valDiv.textContent = displayValue;
+            valDiv.dataset.day = d;
+            valDiv.style.textAlign = 'center';
+            valDiv.style.fontWeight = 'bold';
+            valDiv.style.padding = '8px 0';
+            valDiv.style.backgroundColor = 'transparent';
+            valDiv.style.color = 'white';
+            valDiv.style.marginTop = 'auto'; // push to bottom inside flex container
+            valDiv.style.pointerEvents = 'none'; // so click passes to item
+            
+            item.appendChild(valDiv);
+            
+            item.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 try {
-                    const text = e.target.value;
-                    let newValue = 0;
-                    if (text) {
-                        // Robust parsing: Remove dots, replace comma with dot
-                        const cleanStr = text.replace(/\./g, '').replace(',', '.');
-                        newValue = parseFloat(cleanStr);
+                    await Modals.openDailyIncomeDetailsModal(d);
+                } catch (err) {
+                    console.error('Error opening modal:', err);
+                    if (window.api && window.api.showMessage) {
+                        window.api.showMessage('Erro interno: ' + err.message, 'error');
                     }
-
-                    if (isNaN(newValue) || newValue < 0) newValue = 0;
-
-                    // --- CHECK GLOBAL CONSISTENCY ---
-                    // Rule removed: Daily Actual Income can now be anything, unrestricted.
-                    /* 
-                     * Previous logic enforced: newValue >= declaredSum
-                     * User request: "allow unrestricted entries"
-                     */
-
-                    // 1. Update Visuals Immediately (Prioritize User Feedback)
-                    if (newValue > 0) {
-                        e.target.value = newValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    } else {
-                        e.target.value = '';
-                    }
-
-                    // 2. Persist Data
-                    if (!DataStore.currentMonth.dailyActualIncome) {
-                        DataStore.currentMonth.dailyActualIncome = {};
-                    }
-                    DataStore.currentMonth.dailyActualIncome[d] = newValue;
-                    await DataStore.saveMonth();
-
-                    // 3. Update Income Panel Totals (Local)
-                    this.updateTotals();
-
-                    // 4. Update Global App Summary
-                    if (window.App && window.App.updateSummary) {
-                        window.App.updateSummary();
-                    }
-
-                    // 5. Update Charts
-                    if (window.Charts && window.Charts.render) {
-                        window.Charts.render();
-                    }
-                } catch (error) {
-                    console.error('Error updating daily income:', error);
                 }
-            });
+            }, true); // use capture just in case
 
-            // Enter key handling to blur
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') e.target.blur();
-            });
-
-            item.appendChild(input);
             fragment.appendChild(item);
         }
 
@@ -184,6 +142,16 @@ const Income = {
 
         const dateLabel = income.plannedDate === 'all' || !income.plannedDate ? 'all' : `Dia ${income.plannedDate}`;
 
+        let totalReceived = 0;
+        const details = DataStore.currentMonth?.dailyActualIncomeDetails || {};
+        for (const [dayKey, itemsArray] of Object.entries(details)) {
+            for (const item of itemsArray) {
+                if (item.incomeId === income.id) {
+                    totalReceived += (item.amount || 0);
+                }
+            }
+        }
+
         card.innerHTML = `
             <div class="income-description">
                 <span style="font-weight:bold; margin-right:8px; color:#ADD8E6;font-size:11px;">[${dateLabel}]</span>
@@ -191,7 +159,7 @@ const Income = {
             </div>
             <div class="income-amounts">
                 <div class="income-planned">${formatCurrency(income.plannedAmount)}</div>
-                ${income.receivedAmount ? `<div class="income-received">${formatCurrency(income.receivedAmount)}</div>` : ''}
+                ${totalReceived > 0 ? `<div class="income-received">${formatCurrency(totalReceived)}</div>` : ''}
             </div>
         `;
 

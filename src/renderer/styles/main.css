@@ -350,7 +350,7 @@ body {
 .category-list-header {
     display: grid;
     /* Columns: Color (icon), Name (flex), Future (fixed), Current (fixed), Actions (fixed) */
-    grid-template-columns: 24px 1fr 180px 120px 80px;
+    grid-template-columns: 24px 1fr 130px 170px 80px;
     align-items: center;
     padding: var(--spacing-sm) var(--spacing-md);
     margin-bottom: var(--spacing-xs);
@@ -382,7 +382,7 @@ body {
 .category-header {
     display: grid;
     /* Match columns with header */
-    grid-template-columns: 24px 1fr 180px 120px 80px;
+    grid-template-columns: 24px 1fr 130px 170px 80px;
     align-items: center;
     padding: var(--spacing-sm) var(--spacing-md);
     cursor: pointer;

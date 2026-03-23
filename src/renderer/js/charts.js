@@ -194,7 +194,7 @@ const Charts = {
 
             // Planned and paid expenses
             const dayPlannedExp = dayExpenses.reduce((sum, e) => sum + (e.plannedAmount || 0), 0);
-            const dayPaidExp = dayExpenses.reduce((sum, e) => sum + (e.paidAmount || 0), 0);
+            const dayPaidExp = DataStore.currentMonth.dailyActualExpense?.[d] || 0;
 
             cumPlannedExp += dayPlannedExp;
             cumPaidExp += dayPaidExp;

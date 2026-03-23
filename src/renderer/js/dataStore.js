@@ -289,6 +289,33 @@ const DataStore = {
      */
     async deleteExpense(id) {
         this.currentMonth.expenses = this.currentMonth.expenses.filter(e => e.id !== id);
+        
+        if (this.currentMonth.dailyActualExpenseDetails) {
+            for (const day in this.currentMonth.dailyActualExpenseDetails) {
+                const detailsByCat = this.currentMonth.dailyActualExpenseDetails[day];
+                let changed = false;
+                for (const catId in detailsByCat) {
+                    const originalLength = detailsByCat[catId].length;
+                    detailsByCat[catId] = detailsByCat[catId].filter(item => item.expenseId !== id);
+                    if (detailsByCat[catId].length < originalLength) {
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    let newTotalDaySum = 0;
+                    for (const cat of Object.values(detailsByCat)) {
+                        for (const item of cat) {
+                            newTotalDaySum += (item.amount || 0);
+                        }
+                    }
+                    if (!this.currentMonth.dailyActualExpense) {
+                       this.currentMonth.dailyActualExpense = {};
+                    }
+                    this.currentMonth.dailyActualExpense[day] = newTotalDaySum;
+                }
+            }
+        }
+
         await this.saveMonth();
     },
 
@@ -303,7 +330,8 @@ const DataStore = {
             plannedAmount: income.plannedAmount,
             plannedDate: income.plannedDate,
             receivedAmount: income.receivedAmount || null,
-            receivedDate: income.receivedDate || null
+            receivedDate: income.receivedDate || null,
+            isUnplanned: income.isUnplanned || false
         };
         this.currentMonth.incomes.push(newIncome);
         await this.saveMonth();
@@ -334,6 +362,25 @@ const DataStore = {
      */
     async deleteIncome(id) {
         this.currentMonth.incomes = this.currentMonth.incomes.filter(i => i.id !== id);
+
+        if (this.currentMonth.dailyActualIncomeDetails) {
+            for (const day in this.currentMonth.dailyActualIncomeDetails) {
+                const detailsArr = this.currentMonth.dailyActualIncomeDetails[day];
+                const originalLength = detailsArr.length;
+                this.currentMonth.dailyActualIncomeDetails[day] = detailsArr.filter(item => item.incomeId !== id);
+                if (this.currentMonth.dailyActualIncomeDetails[day].length < originalLength) {
+                    let newTotalDaySum = 0;
+                    for (const item of this.currentMonth.dailyActualIncomeDetails[day]) {
+                        newTotalDaySum += (item.amount || 0);
+                    }
+                    if (!this.currentMonth.dailyActualIncome) {
+                       this.currentMonth.dailyActualIncome = {};
+                    }
+                    this.currentMonth.dailyActualIncome[day] = newTotalDaySum;
+                }
+            }
+        }
+
         await this.saveMonth();
     },
 

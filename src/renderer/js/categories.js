@@ -194,6 +194,18 @@ const Categories = {
         const futureValues = futureExpenses.map(e => formatCurrency(e.plannedAmount || 0));
         const futureValuesDisplay = futureValues.join(' | ');
 
+        let paidTotal = 0;
+        const detailsObj = DataStore.currentMonth?.dailyActualExpenseDetails || {};
+        for (const [day, catGroups] of Object.entries(detailsObj)) {
+            if (catGroups[category.id]) {
+                for (const item of catGroups[category.id]) {
+                    paidTotal += (item.amount || 0);
+                }
+            }
+        }
+        
+        const isUnplannedCat = category.name.toLowerCase() === 'não planejadas';
+
         const card = document.createElement('div');
         card.className = 'category-card';
         card.dataset.categoryId = category.id;
@@ -209,7 +221,10 @@ const Categories = {
                 <span class="category-color" style="background-color: ${category.color}"></span>
                 <span class="category-name">${category.name}</span>
                 ${futureTotalHtml}
-                <span class="category-total">${formatCurrency(currentTotal)}</span>
+                <div class="category-totals-wrapper" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center; font-size: 0.9em; font-weight: normal; padding-right: 15px;">
+                    ${!isUnplannedCat ? `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><span style="display: inline-block; width: 85px; text-align: right; font-weight: bold;">${formatCurrency(currentTotal)}</span></div>` : ''}
+                    ${paidTotal > 0 ? `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">pago:</span><span style="display: inline-block; width: 85px; text-align: right; font-weight: bold;">${formatCurrency(paidTotal)}</span></div>` : ''}
+                </div>
                 <div class="category-actions">
                     <button class="edit-category-btn" title="Editar">✏️</button>
                     <button class="delete-category-btn" title="Excluir">🗑️</button>
@@ -271,13 +286,20 @@ const Categories = {
         const month = DataStore.currentMonth?.month || (new Date().getMonth() + 1);
         const holidays = DataStore.holidays || [];
 
+        const isUnplannedCat = category.name.toLowerCase() === 'não planejadas';
+
         let html = `
-            <table class="expense-table">
+            <table class="expense-table" style="table-layout: fixed; width: 100%;">
+                <colgroup>
+                    <col style="width: auto;">
+                    <col style="width: 175px;">
+                    <col style="width: 100px;">
+                </colgroup>
                 <thead>
                     <tr>
                         <th>Descrição</th>
-                        <th class="amount">A Pagar</th>
-                        <th class="date">Dia</th>
+                        <th class="amount" style="text-align: right; padding-right: 18px;"></th>
+                        <th class="date" style="text-align: right;">Dia</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -297,11 +319,42 @@ const Categories = {
                 ? `<span class="text-muted">Lembrete desp. futura:</span> ${expense.description}`
                 : expense.description;
 
+            let paidTotalExp = 0;
+            let paidDatesExp = [];
+            const detailsObj2 = DataStore.currentMonth?.dailyActualExpenseDetails || {};
+            for (const [day, catGroups] of Object.entries(detailsObj2)) {
+                if (catGroups[category.id]) {
+                    for (const item of catGroups[category.id]) {
+                        if (item.expenseId === expense.id) {
+                            paidTotalExp += item.amount;
+                            if (!paidDatesExp.includes(day)) {
+                                paidDatesExp.push(day);
+                            }
+                        }
+                    }
+                }
+            }
+
+            const plannedAmountObjStr = (expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-';
+            const plannedAmountHtml = !isUnplannedCat 
+                ? `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`
+                : '';
+                
+            const paidAmountHtml = paidTotalExp > 0 
+                ? `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">pago:</span><strong style="display: inline-block; width: 85px; text-align: right;">${formatCurrency(paidTotalExp)}</strong></div>` 
+                : '';
+
             html += `
                 <tr data-expense-id="${expense.id}" data-category-id="${category.id}">
                     <td>${descriptionDisplay}</td>
-                    <td class="amount">${(expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-'}</td>
-                    <td class="date">${expense.plannedDate === 0 ? 'Futuro' : expense.plannedDate}</td>
+                    <td class="amount">
+                        ${plannedAmountHtml}
+                        ${paidAmountHtml}
+                    </td>
+                    <td class="date" style="text-align: right; vertical-align: top;">
+                        <div>${expense.plannedDate === 0 ? 'Futuro' : expense.plannedDate}</div>
+                        ${paidTotalExp > 0 ? `<div style="color: var(--success-color); margin-top: 2px; font-size: 0.9em;">dia(s) ${paidDatesExp.join(', ')}</div>` : ''}
+                    </td>
                 </tr>
             `;
         }

@@ -152,14 +152,22 @@ const Income = {
             }
         }
 
+        const isUnplannedText = income.isUnplanned
+            ? '<br><span style="font-size: 11px; color: #ff6b6b;">(não planejada)</span>' 
+            : '';
+
+        const plannedHtml = !income.isUnplanned 
+            ? `<div class="income-planned"><span style="font-size: 11px; margin-right: 4px; opacity: 0.9;">Esperada:</span>${formatCurrency(income.plannedAmount)}</div>` 
+            : '';
+
         card.innerHTML = `
             <div class="income-description">
                 <span style="font-weight:bold; margin-right:8px; color:#ADD8E6;font-size:11px;">[${dateLabel}]</span>
-                ${income.description}
+                ${income.description}${isUnplannedText}
             </div>
             <div class="income-amounts">
-                <div class="income-planned">${formatCurrency(income.plannedAmount)}</div>
-                ${totalReceived > 0 ? `<div class="income-received">${formatCurrency(totalReceived)}</div>` : ''}
+                ${plannedHtml}
+                ${totalReceived > 0 ? `<div class="income-received"><span style="font-size: 11px; margin-right: 4px; opacity: 0.9;">Efetiva:</span>${formatCurrency(totalReceived)}</div>` : ''}
             </div>
         `;
 

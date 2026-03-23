@@ -980,13 +980,25 @@ const Modals = {
                 
                 const entriesToSave = [];
                 let totalDaySum = 0;
+                const incomesToDelete = [];
 
                 modal.querySelectorAll('.planned-income').forEach(row => {
                     const incId = row.dataset.incomeId;
                     const amount = parseFloat(row.querySelector('.actual-amount-input').value);
+                    
+                    const inc = DataStore.currentMonth.incomes.find(i => i.id === incId);
+                    const isUnplanned = inc && inc.isUnplanned;
+                    
                     if (!isNaN(amount) && amount > 0) {
                         entriesToSave.push({ incomeId: incId, amount: amount });
                         totalDaySum += amount;
+                        if (isUnplanned && inc) {
+                            inc.plannedAmount = amount;
+                        }
+                    } else {
+                        if (isUnplanned && inc) {
+                            incomesToDelete.push(incId);
+                        }
                     }
                 });
 
@@ -1009,10 +1021,11 @@ const Modals = {
 
                             const newInc = await DataStore.addIncome({
                                 description: descFinal,
-                                plannedAmount: 0,
+                                plannedAmount: amount,
                                 plannedDate: day,
                                 receivedAmount: null,
-                                receivedDate: null
+                                receivedDate: null,
+                                isUnplanned: true
                             });
                             
                             entriesToSave.push({
@@ -1023,6 +1036,10 @@ const Modals = {
                             totalDaySum += amount;
                         }
                     }
+                }
+
+                if (incomesToDelete.length > 0) {
+                    DataStore.currentMonth.incomes = DataStore.currentMonth.incomes.filter(i => !incomesToDelete.includes(i.id));
                 }
 
                 if (!DataStore.currentMonth.dailyActualIncomeDetails) {
@@ -1069,33 +1086,61 @@ const Modals = {
                 
                 const detailsToSave = {};
                 let totalDaySum = 0;
+                const expensesToDelete = [];
 
-                container.querySelectorAll('.expense-detail-category-group').forEach(catDiv => {
+                const catGroups = Array.from(container.querySelectorAll('.expense-detail-category-group'));
+                for (const catDiv of catGroups) {
                     const catId = catDiv.querySelector('.planned-items-container').dataset.catId;
                     const catItems = [];
 
                     catDiv.querySelectorAll('.planned-expense').forEach(row => {
                         const expId = row.dataset.expenseId;
                         const amount = parseFloat(row.querySelector('.actual-amount-input').value);
+                        
+                        const exp = DataStore.currentMonth.expenses.find(e => e.id === expId);
+                        let isUnplanned = false;
+                        if (exp) {
+                            const cat = DataStore.categories.find(c => c.id === exp.categoryId);
+                            if (cat && cat.name.toLowerCase() === 'não planejadas') {
+                                isUnplanned = true;
+                            }
+                        }
+
                         if (!isNaN(amount) && amount > 0) {
                             catItems.push({ expenseId: expId, amount: amount });
                             totalDaySum += amount;
+                            if (isUnplanned && exp) {
+                                exp.plannedAmount = amount;
+                            }
+                        } else {
+                            if (isUnplanned && exp) {
+                                expensesToDelete.push(expId);
+                            }
                         }
                     });
 
-                    catDiv.querySelectorAll('.extra-expense').forEach(row => {
+                    const extraExps = Array.from(catDiv.querySelectorAll('.extra-expense'));
+                    for (const row of extraExps) {
                         const desc = row.querySelector('.extra-desc-input').value.trim();
                         const amount = parseFloat(row.querySelector('.actual-amount-input').value);
                         if (!isNaN(amount) && amount > 0) {
-                            catItems.push({ description: desc || 'Despesa Extra', amount: amount, isExtra: true });
+                            const descFinal = desc || 'Despesa Extra';
+                            const newExp = await DataStore.addExpense({
+                                categoryId: catId,
+                                description: descFinal,
+                                plannedAmount: amount,
+                                plannedDate: day,
+                                isTemplate: false
+                            });
+                            catItems.push({ expenseId: newExp.id, amount: amount });
                             totalDaySum += amount;
                         }
-                    });
+                    }
 
                     if (catItems.length > 0) {
                         detailsToSave[catId] = catItems;
                     }
-                });
+                }
 
                 const globalExtras = document.querySelectorAll('#unplanned-new-entries-container .global-extra-expense');
                 if (globalExtras.length > 0) {
@@ -1113,7 +1158,7 @@ const Modals = {
                             const newExp = await DataStore.addExpense({
                                 categoryId: unplannedCat.id,
                                 description: descFinal,
-                                plannedAmount: 0,
+                                plannedAmount: amount,
                                 plannedDate: day,
                                 isTemplate: false
                             });
@@ -1129,6 +1174,10 @@ const Modals = {
                             totalDaySum += amount;
                         }
                     }
+                }
+
+                if (expensesToDelete.length > 0) {
+                    DataStore.currentMonth.expenses = DataStore.currentMonth.expenses.filter(e => !expensesToDelete.includes(e.id));
                 }
 
                 if (!DataStore.currentMonth.dailyActualExpenseDetails) {

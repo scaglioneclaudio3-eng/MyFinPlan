@@ -69,27 +69,50 @@ const Charts = {
         // Create datasets per category
         const datasets = [];
         const categories = DataStore.categories;
+        const actualDetails = DataStore.currentMonth.dailyActualExpenseDetails || {};
 
         for (const category of categories) {
-            const data = [];
+            const plannedData = [];
+            const actualData = [];
 
             for (let d = 1; d <= daysInMonth; d++) {
+                // Planned expenses (Negative Y)
                 const dayExpenses = expensesByDay[d]?.expenses || [];
-                const categoryTotal = dayExpenses
+                const catPlannedTotal = dayExpenses
                     .filter(e => e.categoryId === category.id)
                     .reduce((sum, e) => sum + (e.plannedAmount || 0), 0);
-                data.push(categoryTotal);
+                plannedData.push(-catPlannedTotal);
+
+                // Actual expenses (Positive Y)
+                let catActualTotal = 0;
+                if (actualDetails[d] && actualDetails[d][category.id]) {
+                    catActualTotal = actualDetails[d][category.id].reduce((sum, item) => sum + (item.amount || 0), 0);
+                }
+                actualData.push(catActualTotal);
             }
 
-            // Only add if there's data
-            if (data.some(v => v > 0)) {
-                datasets.push({
-                    label: category.name,
-                    data: data,
-                    backgroundColor: category.color,
-                    borderColor: category.color,
-                    borderWidth: 1
-                });
+            const hasPlanned = plannedData.some(v => v < 0);
+            const hasActual = actualData.some(v => v > 0);
+
+            if (hasPlanned || hasActual) {
+                if (hasActual) {
+                    datasets.push({
+                        label: category.name,
+                        data: actualData,
+                        backgroundColor: category.color,
+                        borderColor: category.color,
+                        borderWidth: 1
+                    });
+                }
+                if (hasPlanned) {
+                    datasets.push({
+                        label: category.name,
+                        data: plannedData,
+                        backgroundColor: category.color,
+                        borderColor: category.color,
+                        borderWidth: 1
+                    });
+                }
             }
         }
 
@@ -101,15 +124,48 @@ const Charts = {
                 maintainAspectRatio: false,
                 layout: {
                     padding: {
-                        bottom: 20
+                        left: 25,
+                        top: 15,
+                        bottom: 15
                     }
                 },
                 plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += formatCurrency(Math.abs(context.parsed.y));
+                                }
+                                return label;
+                            }
+                        }
+                    },
                     legend: {
                         position: 'bottom',
                         labels: {
                             color: '#5d5843',
-                            font: { size: 11 }
+                            font: { size: 11 },
+                            filter: function(item, chartData) {
+                                return chartData.datasets.findIndex(d => d.label === item.text) === item.datasetIndex;
+                            }
+                        },
+                        onClick: function(e, legendItem, legend) {
+                            const label = legendItem.text;
+                            const chart = legend.chart;
+                            
+                            chart.data.datasets.forEach((dataset, i) => {
+                                if (dataset.label === label) {
+                                    if (chart.isDatasetVisible(i)) {
+                                        chart.hide(i);
+                                    } else {
+                                        chart.show(i);
+                                    }
+                                }
+                            });
                         }
                     },
                     title: {
@@ -127,11 +183,43 @@ const Charts = {
                         grid: { color: '#ccbe8b' },
                         ticks: {
                             color: '#5d5843',
-                            callback: (value) => formatCurrency(value)
+                            callback: (value) => formatCurrency(Math.abs(value))
                         }
                     }
                 }
-            }
+            },
+            plugins: [{
+                id: 'customLabelsPlugin',
+                afterDraw: (chart) => {
+                    if (!chart.scales.y) return;
+                    
+                    const { ctx, chartArea: { top, bottom } } = chart;
+                    const yZero = chart.scales.y.getPixelForValue(0);
+                    const xPos = 12; // Start from left edge 
+                    
+                    ctx.save();
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.fillStyle = '#5d5843';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    // Despesas Efetivas (Top Half)
+                    ctx.save();
+                    ctx.translate(xPos, (top + yZero) / 2);
+                    ctx.rotate(-Math.PI / 2);
+                    ctx.fillText('Despesas Efetivas', 0, 0);
+                    ctx.restore();
+                    
+                    // Despesas Planejadas (Bottom Half)
+                    ctx.save();
+                    ctx.translate(xPos, (yZero + bottom) / 2);
+                    ctx.rotate(-Math.PI / 2);
+                    ctx.fillText('Despesas Planejadas', 0, 0);
+                    ctx.restore();
+                    
+                    ctx.restore();
+                }
+            }]
         });
     },
 

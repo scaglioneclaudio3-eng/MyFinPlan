@@ -42,19 +42,32 @@ const Calendar = {
             grid.appendChild(empty);
         }
 
+        let accEffectiveFlux = 0;
+        let accPlannedFlux = 0;
+        
         // Day cells
         for (let day = 1; day <= daysInMonth; day++) {
+            const actualExpense = DataStore.currentMonth.dailyActualExpense?.[day] || 0;
+            const actualIncome = DataStore.currentMonth.dailyActualIncome?.[day] || 0;
+            accEffectiveFlux += (actualIncome - actualExpense);
+
+            const plannedExpense = expensesByDay[day]?.totalPlanned || 0;
+            const plannedIncome = incomeByDay[day] || 0;
+            accPlannedFlux += (plannedIncome - plannedExpense);
+
             const dayCell = this.createDayCell(day, {
                 year,
                 month,
                 isToday: day === todayDate,
                 isWeekend: isWeekend(year, month, day),
                 isHoliday: holidays.includes(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`),
-                isHoliday: holidays.includes(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`),
                 expenses: expensesByDay[day]?.expenses || [],
-                totalPlanned: expensesByDay[day]?.totalPlanned || 0,
-                totalPaid: expensesByDay[day]?.totalPaid || 0,
-                income: incomeByDay[day] || 0
+                totalPlanned: plannedExpense,
+                totalPaid: actualExpense,
+                income: plannedIncome,
+                actualIncome: actualIncome,
+                accEffectiveFlux: accEffectiveFlux,
+                accPlannedFlux: accPlannedFlux
             });
             grid.appendChild(dayCell);
         }
@@ -83,16 +96,35 @@ const Calendar = {
         const expenseTotal = data.totalPlanned || 0;
         const paidTotal = data.totalPaid || 0;
 
-        const actualIncome = DataStore.currentMonth.dailyActualIncome?.[day] || 0;
+        const actualIncome = data.actualIncome || 0;
         const fluxPlan = data.income - expenseTotal;
         const fluxEfetivo = actualIncome - paidTotal;
+        const accEffectiveFlux = data.accEffectiveFlux || 0;
+        const accPlannedFlux = data.accPlannedFlux || 0;
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const currentDate = now.getDate();
+        const cellDate = new Date(data.year, data.month - 1, day);
+        const todayDateObj = new Date(currentYear, currentMonth - 1, currentDate);
+        const isFutureDay = cellDate > todayDateObj;
 
         cell.innerHTML = `
             <div class="calendar-day-header">
                 <span class="calendar-day-number">${day}</span>
-                <span class="calendar-day-balance ${fluxEfetivo >= 0 ? 'positive' : 'negative'}">
-                    ${formatCurrency(fluxEfetivo)}
-                </span>
+                <div style="display: flex; gap: 4px;">
+                    ${!isFutureDay ? `
+                    <span class="calendar-day-balance ${accEffectiveFlux >= 0 ? 'positive' : 'negative'}" style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1;">
+                        <span style="font-size: 8px; opacity: 0.7; text-transform: uppercase;">Fluxo Acum. Efetivo</span>
+                        <span style="font-size: 11px;">${formatCurrency(accEffectiveFlux)}</span>
+                    </span>
+                    ` : ''}
+                    <span class="calendar-day-balance planned-pink" style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1;">
+                        <span style="font-size: 8px; opacity: 0.7; text-transform: uppercase;">Fluxo Acum. Planejado</span>
+                        <span style="font-size: 11px;">${formatCurrency(accPlannedFlux)}</span>
+                    </span>
+                </div>
             </div>
             <div class="calendar-day-content">
                 <div class="calendar-flux-item plan">
@@ -134,20 +166,77 @@ const Calendar = {
 
         title.textContent = `Detalhamento do Dia ${day}/${DataStore.currentMonth.month}/${DataStore.currentMonth.year}`;
 
-        // Render expenses (all of them, not just 5)
-        expenseList.innerHTML = this.renderExpensePairs(data.expenses, day, true);
+        // Render expenses planeadas (all of them, not just 5)
+        let expensesHtml = '';
+        if (data.expenses && data.expenses.length > 0) {
+            expensesHtml += `<h5 style="margin-top: 5px; margin-bottom: 5px; color: #ffca28; font-size: 13px;">Despesas Planejadas:</h5>`;
+            expensesHtml += this.renderExpensePairs(data.expenses, day, true);
+        }
 
-        // Render income details
-        const incomeDetails = DataStore.currentMonth.dailyActualIncomeDetails?.[day] || [];
-        if (incomeDetails.length > 0) {
-            incomeList.innerHTML = incomeDetails.map(item => `
+        // Render despesas efetivas (pagas)
+        const actualExpenseDetails = DataStore.currentMonth.dailyActualExpenseDetails?.[day] || {};
+        const allMonthExpenses = DataStore.currentMonth.expenses || [];
+        const categories = DataStore.categories || [];
+        
+        let actualExpensesList = [];
+        for (const [catId, items] of Object.entries(actualExpenseDetails)) {
+            const category = categories.find(c => c.id === catId);
+            for (const item of items) {
+                let desc = item.description;
+                if (!item.isExtra) {
+                    const originalExpense = allMonthExpenses.find(e => e.id === item.expenseId);
+                    if (originalExpense) {
+                        desc = originalExpense.description;
+                    }
+                }
+                actualExpensesList.push({
+                    description: desc,
+                    amount: item.amount,
+                    category: category
+                });
+            }
+        }
+
+        if (actualExpensesList.length > 0) {
+            expensesHtml += `<h5 style="margin-top: 15px; margin-bottom: 5px; color: var(--success-color); font-size: 13px;">Despesas Efetivas:</h5>`;
+            expensesHtml += actualExpensesList.map(item => `
                 <div class="calendar-expense-item">
                     <div class="line-a">
-                        <span class="description">${item.description}</span>
-                        <span class="amount">${formatCurrency(item.amount)}</span>
+                        <span class="description" style="border-left: 6px solid ${item.category?.color || '#888'}; padding-left: 4px;">
+                            ${item.description}
+                        </span>
+                        <span class="amount" style="background-color: ${item.category?.color || '#888'}; padding: 0 4px; border-radius: 2px;">${formatCurrency(item.amount)}</span>
                     </div>
                 </div>
             `).join('');
+        }
+
+        if (expensesHtml === '') {
+            expensesHtml = '<div class="calendar-expense-item"><div class="line-a"><span class="description">Nenhuma despesa registrada</span></div></div>';
+        }
+
+        expenseList.innerHTML = expensesHtml;
+
+        // Render income details
+        const incomeDetails = DataStore.currentMonth.dailyActualIncomeDetails?.[day] || [];
+        const monthIncomes = DataStore.currentMonth.incomes || [];
+        if (incomeDetails.length > 0) {
+            incomeList.innerHTML = incomeDetails.map(item => {
+                let desc = item.description;
+                if (!desc && item.incomeId) {
+                    const originalIncome = monthIncomes.find(i => i.id === item.incomeId);
+                    if (originalIncome) {
+                        desc = originalIncome.description;
+                    }
+                }
+                return `
+                <div class="calendar-expense-item">
+                    <div class="line-a">
+                        <span class="description" style="border-left: 6px solid var(--success-color); padding-left: 4px;">${desc || 'Receita Efetiva'}</span>
+                        <span class="amount" style="background-color: var(--success-color); padding: 0 4px; border-radius: 2px;">${formatCurrency(item.amount)}</span>
+                    </div>
+                </div>
+            `}).join('');
         } else {
             incomeList.innerHTML = `<div class="calendar-expense-item"><div class="line-a"><span class="description">Nenhuma receita efetiva registrada</span></div></div>`;
         }
@@ -223,7 +312,7 @@ const Calendar = {
                         <span class="description" style="border-left: 6px solid ${expense.category?.color || '#888'}; padding-left: 4px;">
                             ${expense.description}
                         </span>
-                        <span class="amount ${amountBgClass}">${formatCurrency(expense.plannedAmount)}</span>
+                        <span class="amount ${amountBgClass}" style="background-color: ${expense.category?.color || '#888'};">${formatCurrency(expense.plannedAmount)}</span>
                     </div>
                 </div>
             `;

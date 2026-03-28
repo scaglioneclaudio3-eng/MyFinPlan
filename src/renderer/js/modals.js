@@ -524,6 +524,7 @@ const Modals = {
                 html += `
                             </tbody>
                         </table>
+                        ${!isFuture ? `<button type="button" class="btn btn-outline btn-sm btn-add-extra-cat" style="margin-top: 5px; width: 100%; border-style: dashed; border-radius: 4px;">+ Adicionar Despesa Efetiva</button>` : ''}
                     </div>
                 `;
                 
@@ -532,6 +533,28 @@ const Modals = {
                 catDiv.querySelectorAll('.actual-amount-input').forEach(input => {
                     input.addEventListener('input', () => this.updateDailyExpenseModalTotal());
                 });
+
+                if (!isFuture) {
+                    const addExtraBtn = catDiv.querySelector('.btn-add-extra-cat');
+                    if (addExtraBtn) {
+                        addExtraBtn.addEventListener('click', () => {
+                            const tbody = catDiv.querySelector('tbody');
+                            const tr = document.createElement('tr');
+                            tr.className = 'expense-detail-row extra-expense';
+                            tr.innerHTML = `
+                                <td>
+                                    <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição da Despesa Efetiva" style="width: 100%; padding: 4px;">
+                                </td>
+                                <td class="amount">
+                                    <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" style="width: 100%; padding: 4px;">
+                                </td>
+                            `;
+                            tr.querySelector('.actual-amount-input').addEventListener('input', () => this.updateDailyExpenseModalTotal());
+                            tbody.appendChild(tr);
+                            tr.querySelector('.extra-desc-input').focus();
+                        });
+                    }
+                }
 
                 container.appendChild(catDiv);
             });
@@ -1124,12 +1147,14 @@ const Modals = {
                         const desc = row.querySelector('.extra-desc-input').value.trim();
                         const amount = parseFloat(row.querySelector('.actual-amount-input').value);
                         if (!isNaN(amount) && amount > 0) {
-                            const descFinal = desc || 'Despesa Extra';
+                            const descFinal = desc || 'Despesa Efetiva';
                             const newExp = await DataStore.addExpense({
                                 categoryId: catId,
                                 description: descFinal,
-                                plannedAmount: amount,
+                                plannedAmount: 0,
                                 plannedDate: day,
+                                paidAmount: amount,
+                                paidDate: day,
                                 isTemplate: false
                             });
                             catItems.push({ expenseId: newExp.id, amount: amount });
@@ -1158,8 +1183,10 @@ const Modals = {
                             const newExp = await DataStore.addExpense({
                                 categoryId: unplannedCat.id,
                                 description: descFinal,
-                                plannedAmount: amount,
+                                plannedAmount: 0,
                                 plannedDate: day,
+                                paidAmount: amount,
+                                paidDate: day,
                                 isTemplate: false
                             });
                             
@@ -1189,6 +1216,35 @@ const Modals = {
 
                 DataStore.currentMonth.dailyActualExpenseDetails[day] = detailsToSave;
                 DataStore.currentMonth.dailyActualExpense[day] = totalDaySum;
+
+                // Synchronize paid amounts back to the core expenses array correctly
+                DataStore.currentMonth.expenses.forEach(e => {
+                    e.paidAmount = null;
+                    e.paidDate = null;
+                });
+                
+                const allDetails = DataStore.currentMonth.dailyActualExpenseDetails;
+                for (const [dayKey, dayCatGroups] of Object.entries(allDetails)) {
+                    for (const catDetails of Object.values(dayCatGroups)) {
+                        for (const item of catDetails) {
+                            const eId = item.expenseId;
+                            const e = DataStore.currentMonth.expenses.find(x => x.id === eId);
+                            if (e) {
+                                e.paidAmount = (e.paidAmount || 0) + (item.amount || 0);
+                                if (!e.paidDate) {
+                                    e.paidDate = dayKey;
+                                } else {
+                                    const dates = e.paidDate.toString().split(', ').map(s=>s.trim());
+                                    if (!dates.includes(dayKey.toString())) {
+                                        dates.push(dayKey);
+                                        dates.sort((a,b) => parseInt(a) - parseInt(b));
+                                        e.paidDate = dates.join(', ');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // Save internally
                 const savePromise = DataStore.saveMonth();

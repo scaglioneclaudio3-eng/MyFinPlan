@@ -21,49 +21,35 @@ No topo da tela, você encontrará:
   - **Gráfico 1/2:** Visualizações visuais de gastos e fluxo de caixa.
 
 ### 2. Lançamentos (Despesas)
-- Clique no botão **"+"** ao lado de "Despesas" para adicionar uma nova categoria.
-- Dentro de cada categoria, clique em **"Adicionar Despesa"**.
-- **Campos:**
-  - **Descrição:** Nome do gasto.
-  - **Valor Previsto:** Quanto você espera pagar.
-  - **Dia Vencimento:** Dia do mês (1-31). Use **-1** para contas atrasadas de meses anteriores e **0** para despesas futuras apenas para lembrete.
-  - **Valor Pago/Dia Pagamento:** Preencha quando efetuar o pagamento.
+- Clique no botão **"+"** ao lado de uma categoria para adicionar uma nova despesa.
+- **Campos:** Descrição, Valor Previsto e Dia Vencimento (Use **-1** para contas atrasadas e **0** para lembretes).
+- **Despesas Não Planejadas:** Você também pode adicionar despesas não planejadas clicando em um dia no painel "Despesas Efetivas Diárias" para abrir o popup de detalhes daquele dia.
+- Ao clicar em uma despesa, você poderá informar o valor pago e a data (suportando inclusive pagamentos divididos em vários dias). Valores de "planejado" e "pago" são exibidos lado a lado na interface principal.
 
 ### 3. Receitas
-O aplicativo possui duas formas de controle de receita:
-1. **Receitas Previstas:** Clique no botão **"+"** em "Receitas" para adicionar fontes de renda (ex: Salário). Você pode definir um dia específico ou "ALL" para rendas que entram diariamente.
-2. **Renda Efetiva Diária:** No final da página de Lançamentos, há uma grade com todos os dias do mês. **Digite aqui o valor exato que entrou em sua conta em cada dia**. 
-   - Estes campos possuem fundo azul, indicando que são áreas de preenchimento manual frequente.
+- **Receitas Esperadas:** Podem ser adicionadas usando o botão **"+"**. Você pode editar os valores de receitas esperadas a qualquer momento diretamente na tabela.
+- **Renda Efetiva Diária:** No fim da página de Lançamentos, há uma grade com todos os dias do mês (fundo azul). Clique em qualquer dia para abrir o popup detalhado, onde você pode facilmente lançar e ajustar suas receitas reais.
 
-### 4. Resumo e Calendário
-- A **Barra de Resumo** na parte inferior mostra seu saldo previsto e saldo real baseado no que foi pago/recebido.
-- O **Calendário** ajusta automaticamente as datas de vencimento: despesas que vencem em fins de semana ou feriados são movidas para o próximo dia útil.
+### 4. Calendário e Visualizações
+- Alterne entre Lançamentos, Calendário e Gráficos usando as abas no topo.
+- No **Calendário**, os fins de semana recebem destaque visual escurecido.
+- Você pode acompanhar o **Fluxo Acumulado Planejado** (rosa, exibido em todos os dias do mês) e o **Fluxo Acumulado Efetivo** (calculado e visível apenas até a data atual).
 
-### 5. Configurações
-Clique no menu de configurações para ajustar:
-- Porcentagem de renda recebida aos sábados/domingos.
-- Transferência automática de renda de fim de semana para o primeiro dia útil subsequente.
-- Localização (Estado/Cidade) para busca automática de feriados.
-- Frequência de backup dos seus dados.
+### 5. Detalhes Diários
+No calendário (ou nos painéis diários de efetivos), clique em um dia para visualizar um popup com todas as atividades financeiras e os resumos de receitas e despesas exatos daquele dia.
 
-### 6. Detalhes do Calendário
-No calendário clique em um dia para visualizar em detalhes as atividades financeiras e os correspondentes resumos do dia.
+### 6. Lançamentos Recorrentes ("ALL") e Feriados
+- Entradas definidas com o dia "all" (ou recorrentes) afetam todos os dias do mês.
+- Receitas em fins de semana podem ter porcentagens específicas definidas nas Configurações.
+- Lançamentos previstos para cair em fins de semana ou feriados podem ser movidos automaticamente para o próximo dia útil, dependendo de suas preferências.
 
-### 7. Regras de Receitas em Fins de Semana e Feriados
-Receitas previstas e efetivas em fins de semana e feriados são inseridas pelo App no primeiro subsequente dia útil.
+### 7. Copiando Meses
+Para facilitar a criação de novos planejamentos, use o menu **Editar → Copiar Mês** para replicar a estrutura e despesas de um mês para o outro.
 
-### 8. Receitas Previstas Recorrentes (ALL)
-Receitas previstas definidas com dia "all" são médias previstas pelo usuário e se aplicam a todos os dias do mês, e sábados, domingos e feriados seguem porcentagens dessas receitas, conforme o especificado em configurações.
-
-
-### 9. Renda Efetiva Diária
-No final da página de Lançamentos, há uma grade com todos os dias do mês. Digite aqui o valor que efetivamente entrou em conta em cada dia. Estes campos possuem fundo azul.
-
-### 10. Configurações
-No menu Configurações você pode ajustar:
-a) porcentagem de renda recebida em fins de semana;
-b) transferência automática para o primeiro dia útil subsequente;
-c) localização para feriados;
-d) frequência de backup.
+### 8. Configurações
+No menu de configurações (engrenagem), você ajusta:
+- Porcentagem de renda recebida aos sábados e domingos.
+- Transferência ou não de lançamentos de fins de semana/feriados para dias úteis (com indicação da sua localidade para feriados).
+- Frequência e processos de backup do banco de dados.
 
 

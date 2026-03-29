@@ -90,7 +90,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: var(--spacing-sm) var(--spacing-lg);
-    background-color: var(--bg-secondary);
+    background-color: #c5e1cd; /* Light green as requested */
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
     gap: var(--spacing-lg);
@@ -178,15 +178,16 @@ body {
     border: none;
     border-radius: var(--border-radius);
     background-color: transparent;
-    color: var(--text-secondary);
+    color: #444; /* Dark gray for visibility on light green */
+    font-weight: 500;
     font-size: var(--font-size-md);
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .tab-btn:hover {
-    color: var(--text-primary);
-    background-color: var(--bg-tertiary);
+    color: #000;
+    background-color: rgba(255, 255, 255, 0.4); /* Soft highlight */
 }
 
 .tab-btn.active {
@@ -213,6 +214,10 @@ body {
 }
 
 /* Entry View */
+#entry-view {
+    background-color: #c5e1cd;
+}
+
 .entry-container {
     display: grid;
     grid-template-columns: 1fr 1fr;

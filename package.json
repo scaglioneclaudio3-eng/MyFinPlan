@@ -1,6 +1,6 @@
 {
   "name": "excel2desktop-app",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Aplicativo de Finanças Pessoais",
   "main": "src/main/main.js",
   "scripts": {

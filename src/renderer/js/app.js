@@ -402,41 +402,37 @@ const App = {
                     </ul>
                 </div>
                 <div class="tutorial-step">
-                    <h4>3. Registrando Pagamentos</h4>
-                    <p>Clique em uma despesa para editar e informar o valor pago e a data do pagamento.</p>
+                    <h4>3. Pagamentos e Despesas Não Planejadas</h4>
+                    <p>Clique em uma despesa para informar o valor pago e a data. Valores de 'planejado' e 'pago' são exibidos com clareza. Para adicionar despesas extras, clique num dia no painel "Despesas Efetivas Diárias" para abrir o popup de detalhes expandido.</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>4. Visualizações</h4>
-                    <p>Use as abas no topo para alternar entre Lançamentos, Calendário e Gráficos.</p>
+                    <h4>4. Receitas Esperadas e Efetivas</h4>
+                    <p>Você pode editar as "Receitas Esperadas" na tabela superior a qualquer momento. Na seção "Renda Efetiva Diária" (no fim da página), clique em qualquer dia para abrir o popup detalhado e lançar suas receitas reais daquele dia.</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>5. Copiando Meses</h4>
-                    <p>Use o menu Editar → Copiar Mês para copiar despesas de um mês para outro.</p>
+                    <h4>5. Visualizações e Calendário</h4>
+                    <p>Use as abas no topo para alternar as visões. No Calendário, dicas visuais destacam os fins de semana, o "Fluxo Acum. Plan." (destaque rosa para o mês todo) e o "Fluxo Acum. Efet." (exibido e atualizado até a data corrente).</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>6. Detalhes do Calendário</h4>
+                    <h4>6. Detalhes Diários no Calendário</h4>
                     <p>No calendário clique em um dia para visualizar em detalhes as atividades financeiras e os correspondentes resumos do dia.</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>7. Regras de Receitas em Fins de Semana e Feriados</h4>
-                    <p>Receitas previstas e efetivas em fins de semana e feriados são inseridas pelo App no primeiro subsequente dia útil.</p>
+                    <h4>7. Valores Recorrentes (all) e Feriados</h4>
+                    <p>Lançamentos definidos com dia "all" ocorrem todos os dias. Você pode ter porcentagens de renda adaptadas para fins de semana nas Configurações, além da opção de transferir automaticamente lançamentos do final de semana/feriado para o próximo dia útil.</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>8. Receitas (ou Despesas) Previstas Recorrentes (all)</h4>
-                    <p>Receitas previstas definidas com dia "all" são médias previstas pelo usuário e se aplicam a todos os dias do mês, e sábados, domingos e feriados seguem porcentagens dessas receitas, conforme o especificado em configurações.</p>
+                    <h4>8. Copiando Meses</h4>
+                    <p>Use o menu Editar → Copiar Mês para copiar despesas e configurações rapidamente de um mês para outro.</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>9. Renda Efetiva Diária</h4>
-                    <p>No final da página de Lançamentos, há uma grade com todos os dias do mês. Digite aqui o valor que efetivamente entrou em conta em cada dia. Estes campos possuem fundo azul.</p>
-                </div>
-                <div class="tutorial-step">
-                    <h4>10. Configurações</h4>
+                    <h4>9. Configurações</h4>
                     <p>No menu Configurações você pode ajustar:</p>
                     <ul style="list-style-type: none; padding-left: 0;">
-                        <li>a) porcentagem de renda recebida em fins de semana;</li>
-                        <li>b) transferência automática para o primeiro dia útil subsequente;</li>
-                        <li>c) localização para feriados;</li>
-                        <li>d) frequência de backup.</li>
+                        <li>a) Porcentagem de renda recebida em fins de semana;</li>
+                        <li>b) Transferência automática para o primeiro dia útil subsequente;</li>
+                        <li>c) Localidade de referência para o cálculo de feriados;</li>
+                        <li>d) Frequência e criação de backup.</li>
                     </ul>
                 </div>
             </div>

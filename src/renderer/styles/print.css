@@ -4,7 +4,7 @@
 
 /* Screen Styles for Print View */
 #print-view {
-    background-color: #fff;
+    background-color: #c5e1cd; /* Verde parede de hospital mais escuro */
     padding: var(--spacing-lg);
     overflow-y: auto;
 }
@@ -163,7 +163,7 @@
         overflow: visible !important;
         margin: 0 !important;
         padding: 0 !important;
-        background-color: #fff !important;
+        background-color: #c5e1cd !important; /* Verde parede de hospital mais escuro */
         color: #000 !important;
         display: block !important;
         /* Force block layout to fix pagination */
@@ -234,13 +234,13 @@
 }
 
 .day-bg-blue {
-    background-color: #E3F2FD;
-    border: 1px solid #BBDEFB;
+    background-color: #BBDEFB; /* Escurecido */
+    border: 1px solid #64B5F6;
 }
 
 .day-bg-green {
-    background-color: #E8F5E9;
-    border: 1px solid #C8E6C9;
+    background-color: #C8E6C9; /* Escurecido */
+    border: 1px solid #81C784;
 }
 
 .day-bg-blue .print-table th,

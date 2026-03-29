@@ -442,10 +442,10 @@ const App = {
         const modal = document.createElement('div');
         modal.className = 'modal show';
         modal.innerHTML = `
-            <div class="modal-content modal-lg">
-                <div class="modal-header">
-                    <h3>Tutorial</h3>
-                    <button class="modal-close">&times;</button>
+            <div class="modal-content modal-lg" id="tutorial-modal-bg">
+                <div class="modal-header" style="border-bottom-color: rgba(0,0,0,0.1);">
+                    <h3 style="color: #000;">Tutorial</h3>
+                    <button class="modal-close" style="color: #000;">&times;</button>
                 </div>
                 ${tutorialHtml}
             </div>

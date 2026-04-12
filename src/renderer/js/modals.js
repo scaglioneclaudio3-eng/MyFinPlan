@@ -6,6 +6,19 @@
 
 const Modals = {
     /**
+     * Checks if the currently viewed month is in the past
+     * @returns {boolean} True if the month is in the past
+     */
+    isPastMonth() {
+        const now = new Date();
+        const currentY = now.getFullYear();
+        const currentM = now.getMonth() + 1;
+        const targetY = parseInt(DataStore.currentMonth?.year || currentY);
+        const targetM = parseInt(DataStore.currentMonth?.month || currentM);
+        return (targetY < currentY) || (targetY === currentY && targetM < currentM);
+    },
+
+    /**
      * Opens a modal by ID
      * @param {string} modalId - The modal element ID
      */
@@ -21,6 +34,20 @@ const Modals = {
      * @param {string} modalId - The modal element ID
      */
     close(modalId) {
+        if (modalId === 'income-modal') {
+            const desc = document.getElementById('income-description').value.trim();
+            const amount = document.getElementById('income-planned-amount').value.trim();
+            const date = document.getElementById('income-planned-date').value.trim();
+            if (desc !== '' && (amount === '' || date === '')) {
+                if (typeof showToast === 'function') {
+                    showToast('Preencha o valor e a data previstos ou apague a descrição para fechar.', 'warning');
+                } else if (window.api && window.api.showMessage) {
+                    window.api.showMessage('Preencha o valor e a data previstos ou apague a descrição para fechar.', 'warning');
+                }
+                return;
+            }
+        }
+
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.classList.remove('show');
@@ -31,6 +58,21 @@ const Modals = {
      * Closes all open modals
      */
     closeAll() {
+        const incomeModal = document.getElementById('income-modal');
+        if (incomeModal && incomeModal.classList.contains('show')) {
+            const desc = document.getElementById('income-description').value.trim();
+            const amount = document.getElementById('income-planned-amount').value.trim();
+            const date = document.getElementById('income-planned-date').value.trim();
+            if (desc !== '' && (amount === '' || date === '')) {
+                if (typeof showToast === 'function') {
+                    showToast('Preencha o valor e a data previstos ou apague a descrição para fechar.', 'warning');
+                } else if (window.api && window.api.showMessage) {
+                    window.api.showMessage('Preencha o valor e a data previstos ou apague a descrição para fechar.', 'warning');
+                }
+                return;
+            }
+        }
+
         document.querySelectorAll('.modal.show').forEach(modal => {
             modal.classList.remove('show');
         });
@@ -41,6 +83,15 @@ const Modals = {
      * @param {Object|null} category - Existing category to edit, or null for new
      */
     openCategoryModal(category = null) {
+        if (this.isPastMonth()) {
+            if (typeof showToast === 'function') {
+                showToast('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error', 6000);
+            } else if (window.api && window.api.showMessage) {
+                window.api.showMessage('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error');
+            }
+            return;
+        }
+
         const modal = document.getElementById('category-modal');
         const title = document.getElementById('category-modal-title');
         const nameInput = document.getElementById('category-name');
@@ -69,6 +120,15 @@ const Modals = {
      * @param {string} categoryId - Category ID for new expenses
      */
     openExpenseModal(expense = null, categoryId = null) {
+        if (this.isPastMonth()) {
+            if (typeof showToast === 'function') {
+                showToast('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error', 6000);
+            } else if (window.api && window.api.showMessage) {
+                window.api.showMessage('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error');
+            }
+            return;
+        }
+
         const modal = document.getElementById('expense-modal');
         const title = document.getElementById('expense-modal-title');
         const form = document.getElementById('expense-form');
@@ -81,7 +141,14 @@ const Modals = {
         document.getElementById('expense-category-id').value = categoryId || expense?.categoryId || '';
 
         if (expense) {
-            title.textContent = 'Editar Despesa';
+            // Strictly block unplanned expense editing via main modal
+            const checkCat = DataStore.categories.find(c => c.id === expense.categoryId);
+            if (checkCat && checkCat.name.toLowerCase() === 'despesas não planejadas') {
+                if (typeof showToast === 'function') showToast('Despesas não planejadas só podem ser editadas pelo popup diário.', 'warning');
+                return;
+            }
+
+            title.textContent = 'Editar Lançamento';
             document.getElementById('expense-description').readOnly = false;
             document.getElementById('expense-planned-amount').readOnly = false;
             document.getElementById('expense-planned-date').readOnly = false;
@@ -92,7 +159,6 @@ const Modals = {
             document.getElementById('expense-is-template').checked = expense.isTemplate || false;
             document.getElementById('expense-special-type').value = expense.specialType || '';
             deleteBtn.style.display = 'block';
-            title.textContent = 'Editar Lançamento';
 
             // Calculator para Valor Efetivo Pago e Dias
             let totalPaid = 0;
@@ -125,19 +191,46 @@ const Modals = {
         let isUnplanned = false;
         if (activeCatId) {
             const cat = DataStore.categories.find(c => c.id === activeCatId);
-            if (cat && cat.name.toLowerCase() === 'não planejadas') {
+            if (cat && cat.name.toLowerCase() === 'despesas não planejadas') {
                 isUnplanned = true;
             }
         }
 
+        const isFutureCb = document.getElementById('expense-is-future');
+        isFutureCb.checked = expense?.isFutureReminder || expense?.plannedDate === 0;
+
         const plannedAmountInput = document.getElementById('expense-planned-amount');
         const plannedDateInput = document.getElementById('expense-planned-date');
         const plannedRow = plannedAmountInput.closest('.form-row');
+        const paidRow = document.getElementById('expense-paid-row');
+        const isTemplateCb = document.getElementById('expense-is-template');
+        const specialTypeInput = document.getElementById('expense-special-type');
         
+        isFutureCb.onchange = (e) => {
+            if (e.target.checked) {
+                plannedDateInput.placeholder = "Mês ou Dia (Ex: Jan, Fev, 15/Mar)";
+                plannedDateInput.title = "Nome do Mês ou Data Prevista";
+                paidRow.style.display = 'none';
+                specialTypeInput.closest('.form-row').style.display = 'none';
+                isTemplateCb.checked = true; // Future reminders must copy over
+                
+                // Clear any integer-based tracking validation
+                if (plannedDateInput.value == '0') {
+                    plannedDateInput.value = '';
+                }
+            } else {
+                plannedDateInput.placeholder = "all, fds ou 1-31";
+                plannedDateInput.title = "Digite 'all' para diário, 'fds' para finais de semana, 1-31 para dias específicos";
+                paidRow.style.display = 'flex';
+                specialTypeInput.closest('.form-row').style.display = 'flex';
+            }
+        };
+
         if (isUnplanned) {
             plannedRow.style.display = 'none';
             plannedAmountInput.required = false;
             plannedDateInput.required = false;
+            isFutureCb.closest('.form-group').style.display = 'none';
             
             // Set some valid defaults so the form can still submit if needed
             plannedAmountInput.value = 0;
@@ -146,7 +239,11 @@ const Modals = {
             plannedRow.style.display = '';
             plannedAmountInput.required = true;
             plannedDateInput.required = true;
+            isFutureCb.closest('.form-group').style.display = 'block';
         }
+        
+        // Trigger manual execution
+        isFutureCb.onchange({ target: isFutureCb });
 
         this.open('expense-modal');
 
@@ -185,15 +282,58 @@ const Modals = {
      * @param {Object} income - Income data to edit (optional)
      */
     openIncomeModal(income = null) {
+        if (this.isPastMonth()) {
+            if (typeof showToast === 'function') {
+                showToast('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error', 6000);
+            } else if (window.api && window.api.showMessage) {
+                window.api.showMessage('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error');
+            }
+            return;
+        }
+
+        if (income && income.isUnplanned) {
+            if (typeof showToast === 'function') showToast('Receitas não previstas só podem ser editadas pelo popup diário.', 'warning');
+            return;
+        }
+
         const form = document.getElementById('income-form');
         form.reset();
         document.getElementById('income-id').value = '';
         document.getElementById('income-modal-title').textContent = income ? 'Editar Receita' : 'Nova Receita';
         document.getElementById('delete-income-btn').style.display = income ? 'block' : 'none';
 
+        const isUnplannedCb = document.getElementById('income-is-unplanned');
+        const plannedRow = document.getElementById('income-planned-row');
+        isUnplannedCb.checked = false;
+
+        isUnplannedCb.onchange = (e) => {
+            if (e.target.checked) {
+                plannedRow.style.display = 'none';
+                document.getElementById('income-planned-amount').required = false;
+                document.getElementById('income-planned-date').required = false;
+                document.getElementById('income-planned-amount').value = '0';
+                document.getElementById('income-planned-date').value = 'all';
+            } else {
+                plannedRow.style.display = '';
+                document.getElementById('income-planned-amount').required = true;
+                document.getElementById('income-planned-date').required = true;
+                document.getElementById('income-planned-amount').value = '';
+                document.getElementById('income-planned-date').value = '';
+            }
+        };
+
         if (income) {
             document.getElementById('income-id').value = income.id;
             document.getElementById('income-description').readOnly = false;
+            
+            if (income.isUnplanned) {
+                isUnplannedCb.checked = true;
+            } else {
+                isUnplannedCb.checked = false;
+            }
+            // Trigger UI update
+            isUnplannedCb.onchange({ target: isUnplannedCb });
+
             document.getElementById('income-planned-amount').readOnly = false;
             document.getElementById('income-planned-date').readOnly = false;
             document.getElementById('income-description').value = income.description;
@@ -232,6 +372,7 @@ const Modals = {
             document.getElementById('income-planned-date').value = ''; // Default for new income (empty allows editing)
             document.getElementById('income-received-amount').value = '';
             document.getElementById('income-received-date').value = '';
+            isUnplannedCb.onchange({ target: isUnplannedCb });
         }
 
         this.open('income-modal');
@@ -279,6 +420,8 @@ const Modals = {
 
         // Future check: selectedDate > todayDate
         const isFuture = selectedDate > todayDate;
+        const isPast = this.isPastMonth();
+        const isReadOnly = isFuture || isPast;
 
         modal.dataset.day = day;
 
@@ -289,18 +432,21 @@ const Modals = {
             document.getElementById('daily-income-warning').remove();
         }
 
-        if (isFuture) {
-            title.textContent = `Detalhamento (Somente Leitura - Data Futura)`;
+        if (isReadOnly) {
+            let reasonStr = isFuture ? 'Data Futura' : 'Mês Passado';
+            title.textContent = `Detalhamento (Somente Leitura - ${reasonStr})`;
             modal.classList.add('read-only-mode');
             saveBtn.style.display = 'none';
 
             // Add warning
             const warning = document.createElement('div');
             warning.id = 'daily-income-warning';
-            warning.className = 'alert alert-danger';
+            warning.className = isPast ? 'alert alert-warning' : 'alert alert-danger';
             warning.style.marginBottom = '10px';
             warning.style.textAlign = 'center';
-            warning.textContent = 'Não é possível inserir valores efetivos em datas futuras.';
+            warning.textContent = isPast 
+                ? 'A edição de dados de meses passados é bloqueada para preservar o histórico financeiro.' 
+                : 'Não é possível inserir valores efetivos em datas futuras.';
 
             const modalBody = modal.querySelector('.modal-body') || modal.querySelector('.modal-content');
             const header = modal.querySelector('.modal-header');
@@ -336,11 +482,16 @@ const Modals = {
         allMonthIncomes.forEach(plannedInc => {
             const savedActual = existingDetails.find(a => a.incomeId === plannedInc.id);
             const actualValue = savedActual ? savedActual.amount : '';
+            const unplanTxt = plannedInc.isUnplanned ? '<br><span style="font-size: 11px; color: #ff6b6b; font-weight: bold;">(não prevista)</span>' : '';
+            const descHtml = plannedInc.isUnplanned 
+                ? `<input type="text" class="editable-input unplanned-desc-input form-control" value="${plannedInc.description}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>` 
+                : `${plannedInc.description} <span style="font-size: 10px; color: #aaa;">(${plannedInc.plannedDate === 'all' ? 'Freq.' : `${plannedInc.plannedDate}`})</span>`;
+            
             html += `
                 <tr class="expense-detail-row planned-income" data-income-id="${plannedInc.id}">
-                    <td>${plannedInc.description} <span style="font-size: 10px; color: #aaa;">(${plannedInc.plannedDate === 'all' ? 'Freq.' : `${plannedInc.plannedDate}`})</span></td>
+                    <td>${descHtml} ${unplanTxt}</td>
                     <td class="amount">
-                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${actualValue}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${actualValue}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>
                     </td>
                 </tr>
             `;
@@ -351,10 +502,10 @@ const Modals = {
             html += `
                 <tr class="expense-detail-row extra-income">
                     <td>
-                        <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" value="${extra.description}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                        <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" value="${extra.description}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>
                     </td>
                     <td class="amount">
-                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${extra.amount}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                        <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${extra.amount}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>
                     </td>
                 </tr>
             `;
@@ -373,7 +524,7 @@ const Modals = {
             input.addEventListener('input', () => this.updateDailyIncomeModalTotal());
         });
 
-        if (!isFuture) {
+        if (!isReadOnly) {
             const globalAddExtraBtn = document.createElement('button');
             globalAddExtraBtn.type = 'button';
             globalAddExtraBtn.className = 'btn btn-outline btn-sm global-add-unplanned-btn';
@@ -448,14 +599,29 @@ const Modals = {
             const month = parseInt(DataStore.currentMonth.month);
             const selectedDate = new Date(year, month - 1, parseInt(day));
             const isFuture = selectedDate > todayDate;
+            const isPast = this.isPastMonth();
+            const isReadOnly = isFuture || isPast;
 
             modal.dataset.day = day;
-            title.textContent = isFuture 
-                ? `Detalhamento da Despesa (Somente Leitura - Futuro)` 
+            let reasonStr = isFuture ? 'Futuro' : 'Mês Passado';
+            title.textContent = isReadOnly
+                ? `Detalhamento da Despesa (Somente Leitura - ${reasonStr})` 
                 : `Detalhamento da Despesa do Dia ${day}/${String(month).padStart(2, '0')}`;
             
             container.innerHTML = '';
-            saveBtn.style.display = isFuture ? 'none' : 'inline-block';
+            saveBtn.style.display = isReadOnly ? 'none' : 'inline-block';
+
+            if (isReadOnly) {
+                // Add warning
+                const warning = document.createElement('div');
+                warning.className = isPast ? 'alert alert-warning' : 'alert alert-danger';
+                warning.style.marginBottom = '10px';
+                warning.style.textAlign = 'center';
+                warning.textContent = isPast 
+                    ? 'A edição de dados de meses passados é bloqueada para preservar o histórico financeiro.' 
+                    : 'Não é possível inserir valores efetivos em datas futuras.';
+                container.appendChild(warning);
+            }
 
             const categories = [...DataStore.categories].sort((a, b) => a.order - b.order);
             const expensesByDay = DataStore.getExpensesByDay();
@@ -470,8 +636,8 @@ const Modals = {
                 const catPlanned = allMonthExpenses.filter(e => e.categoryId === cat.id);
                 const catActuals = existingDetails[cat.id] || [];
 
-                // Skip rendering if category has no planned expenses today and we are in future (read-only)
-                if (isFuture && catPlanned.length === 0 && catActuals.length === 0) return;
+                // Skip rendering if category has no planned expenses today and we are in read-only mode (future/past)
+                if (isReadOnly && catPlanned.length === 0 && catActuals.length === 0) return;
 
                 const catDiv = document.createElement('div');
                 catDiv.className = 'expense-detail-category-group category-card expanded';
@@ -497,11 +663,16 @@ const Modals = {
                 catPlanned.forEach(plannedExp => {
                     const savedActual = catActuals.find(a => a.expenseId === plannedExp.id);
                     const actualValue = savedActual ? savedActual.amount : '';
+                    const isUnplannedCat = cat.name.toLowerCase() === 'despesas não planejadas';
+                    const descHtml = isUnplannedCat 
+                        ? `<input type="text" class="editable-input unplanned-desc-input form-control" value="${plannedExp.description}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>` 
+                        : `${plannedExp.description}`;
+
                     html += `
                         <tr class="expense-detail-row planned-expense" data-expense-id="${plannedExp.id}">
-                            <td>${plannedExp.description}</td>
+                            <td>${descHtml}</td>
                             <td class="amount">
-                                <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${actualValue}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                                <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${actualValue}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>
                             </td>
                         </tr>
                     `;
@@ -512,10 +683,10 @@ const Modals = {
                     html += `
                         <tr class="expense-detail-row extra-expense">
                             <td>
-                                <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" value="${extra.description}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                                <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" value="${extra.description}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>
                             </td>
                             <td class="amount">
-                                <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${extra.amount}" style="width: 100%; padding: 4px;" ${isFuture ? 'disabled' : ''}>
+                                <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${extra.amount}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>
                             </td>
                         </tr>
                     `;
@@ -524,7 +695,7 @@ const Modals = {
                 html += `
                             </tbody>
                         </table>
-                        ${!isFuture ? `<button type="button" class="btn btn-outline btn-sm btn-add-extra-cat" style="margin-top: 5px; width: 100%; border-style: dashed; border-radius: 4px;">+ Adicionar Despesa Efetiva</button>` : ''}
+                        ${!isReadOnly ? `<button type="button" class="btn btn-outline btn-sm btn-add-extra-cat" style="margin-top: 5px; width: 100%; border-style: dashed; border-radius: 4px;">+ Adicionar Despesa Efetiva</button>` : ''}
                     </div>
                 `;
                 
@@ -534,7 +705,7 @@ const Modals = {
                     input.addEventListener('input', () => this.updateDailyExpenseModalTotal());
                 });
 
-                if (!isFuture) {
+                if (!isReadOnly) {
                     const addExtraBtn = catDiv.querySelector('.btn-add-extra-cat');
                     if (addExtraBtn) {
                         addExtraBtn.addEventListener('click', () => {
@@ -559,7 +730,7 @@ const Modals = {
                 container.appendChild(catDiv);
             });
 
-            if (!isFuture) {
+            if (!isReadOnly) {
                 const globalAddExtraBtn = document.createElement('button');
                 globalAddExtraBtn.type = 'button';
                 globalAddExtraBtn.className = 'btn btn-outline btn-sm global-add-unplanned-btn';
@@ -742,11 +913,15 @@ const Modals = {
             }
 
             // Check for worker expense non-standard dates
+            const categoryId = document.getElementById('expense-category-id').value;
+            const cat = DataStore.categories.find(c => c.id === categoryId);
+            const isUnplanned = cat && cat.name.toLowerCase() === 'despesas não planejadas';
+            
             const isWorkerExpense = ['SALARY_ADVANCE', 'INSS', 'FGTS', 'FIFTH_WORKING_DAY', 'VALE_TRANSPORTE', 'VALE_ALIMENTACAO', 'CESTA_BASICA'].includes(specialType);
             const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
             const isStandardDate = plannedDate === 15 || plannedDate === daysInMonth || plannedDate === 'all' || plannedDate === 'fds';
 
-            if (isWorkerExpense && !isStandardDate) {
+            if (!isUnplanned && isWorkerExpense && !isStandardDate) {
                 // Store form data temporarily to use after choice
                 this.pendingExpense = {
                     categoryId: document.getElementById('expense-category-id').value,
@@ -806,10 +981,15 @@ const Modals = {
             e.preventDefault();
 
             // Parse planned date
+            const isUnplannedCb = document.getElementById('income-is-unplanned');
+            const isUnplanned = isUnplannedCb ? isUnplannedCb.checked : false;
+            
             const plannedDateInput = document.getElementById('income-planned-date').value.trim().toLowerCase();
             let plannedDate = 'all';
 
-            if (plannedDateInput === 'all') {
+            if (isUnplanned) {
+                plannedDate = null;
+            } else if (plannedDateInput === 'all') {
                 plannedDate = 'all';
             } else {
                 const day = parseInt(plannedDateInput);
@@ -836,7 +1016,7 @@ const Modals = {
             };
 
             const plannedAmountVal = document.getElementById('income-planned-amount').value;
-            const plannedAmount = parseAmount(plannedAmountVal);
+            const plannedAmount = isUnplanned ? 0 : parseAmount(plannedAmountVal);
 
             const receivedAmountVal = document.getElementById('income-received-amount').value;
             const receivedAmount = receivedAmountVal ? parseAmount(receivedAmountVal) : NaN;
@@ -844,53 +1024,55 @@ const Modals = {
             const receivedDateVal = document.getElementById('income-received-date').value;
             const receivedDate = receivedDateVal ? parseInt(receivedDateVal) : null;
 
-            // --- STRICT VALIDATION RULES ---
+            if (!isUnplanned) {
+                // --- STRICT VALIDATION RULES ---
 
-            // Rule 1: Planned Amount and Date must form a complete pair
-            const hasPlannedAmount = !isNaN(plannedAmount) && plannedAmount > 0;
-            const hasPlannedDate = plannedDate !== null && plannedDate !== '';
+                // Rule 1: Planned Amount and Date must form a complete pair
+                const hasPlannedAmount = !isNaN(plannedAmount) && plannedAmount > 0;
+                const hasPlannedDate = plannedDate !== null && plannedDate !== '';
 
-            if ((hasPlannedAmount && !hasPlannedDate) || (!hasPlannedAmount && hasPlannedDate)) {
-                await window.api.showMessage('Não é permitido salvar sem conjuntos completos de receita e data', 'warning');
-                return;
-            }
-
-            // Enforce presence of at least planned data
-            if (!hasPlannedAmount && !hasPlannedDate) {
-                await window.api.showMessage('Por favor insira a receita e a data prevista', 'warning');
-                return;
-            }
-
-            // Rule 2: Received Amount and Date must form a complete pair (if any is entered)
-            const hasReceivedAmount = !isNaN(receivedAmount);
-            const hasReceivedDate = receivedDate !== null && !isNaN(receivedDate);
-
-            if ((hasReceivedAmount && !hasReceivedDate) || (!hasReceivedAmount && hasReceivedDate)) {
-                await window.api.showMessage('Não é permitido salvar sem conjuntos completos de receita e data', 'warning');
-                return;
-            }
-
-            // Rule 3: Cannot have Received Data without Planned Data
-            if ((hasReceivedAmount || hasReceivedDate) && (!hasPlannedAmount || !hasPlannedDate)) {
-                await window.api.showMessage('Não é permitido incluir data ou correspondente receita recebida sem antes completar receita esperada e correspondente data', 'warning');
-                return;
-            }
-
-            // --- Rule 4: Consistency Check with Daily Actual Income ---
-            if (hasReceivedAmount && hasReceivedDate) {
-                const day = receivedDate;
-                // Get the limit (Daily Actual Income for this day)
-                const dailyLimit = DataStore.currentMonth.dailyActualIncome?.[day] || 0;
-
-                // Sum all OTHER incomes for this day
-                const currentIncomeId = document.getElementById('income-id').value;
-                const otherIncomesTotal = DataStore.currentMonth.incomes
-                    .filter(inc => inc.receivedDate === day && inc.id !== currentIncomeId)
-                    .reduce((sum, inc) => sum + (inc.receivedAmount || 0), 0);
-
-                if ((otherIncomesTotal + receivedAmount) > dailyLimit) {
-                    await window.api.showMessage('Erro: receita recebida no painel maior que total recebido no dia', 'error');
+                if ((hasPlannedAmount && !hasPlannedDate) || (!hasPlannedAmount && hasPlannedDate)) {
+                    await window.api.showMessage('Não é permitido salvar sem conjuntos completos de receita e data', 'warning');
                     return;
+                }
+
+                // Enforce presence of at least planned data
+                if (!hasPlannedAmount && !hasPlannedDate) {
+                    await window.api.showMessage('Por favor insira a receita e a data prevista', 'warning');
+                    return;
+                }
+
+                // Rule 2: Received Amount and Date must form a complete pair (if any is entered)
+                const hasReceivedAmount = !isNaN(receivedAmount);
+                const hasReceivedDate = receivedDate !== null && !isNaN(receivedDate);
+
+                if ((hasReceivedAmount && !hasReceivedDate) || (!hasReceivedAmount && hasReceivedDate)) {
+                    await window.api.showMessage('Não é permitido salvar sem conjuntos completos de receita e data', 'warning');
+                    return;
+                }
+
+                // Rule 3: Cannot have Received Data without Planned Data
+                if ((hasReceivedAmount || hasReceivedDate) && (!hasPlannedAmount || !hasPlannedDate)) {
+                    await window.api.showMessage('Não é permitido incluir data ou correspondente receita recebida sem antes completar receita esperada e correspondente data', 'warning');
+                    return;
+                }
+
+                // --- Rule 4: Consistency Check with Daily Actual Income ---
+                if (hasReceivedAmount && hasReceivedDate) {
+                    const day = receivedDate;
+                    // Get the limit (Daily Actual Income for this day)
+                    const dailyLimit = DataStore.currentMonth.dailyActualIncome?.[day] || 0;
+
+                    // Sum all OTHER incomes for this day
+                    const currentIncomeId = document.getElementById('income-id').value;
+                    const otherIncomesTotal = DataStore.currentMonth.incomes
+                        .filter(inc => inc.receivedDate === day && inc.id !== currentIncomeId)
+                        .reduce((sum, inc) => sum + (inc.receivedAmount || 0), 0);
+
+                    if ((otherIncomesTotal + receivedAmount) > dailyLimit) {
+                        await window.api.showMessage('Erro: receita recebida no painel maior que total recebido no dia', 'error');
+                        return;
+                    }
                 }
             }
 
@@ -898,8 +1080,9 @@ const Modals = {
                 description: description,
                 plannedAmount: plannedAmount || 0,
                 plannedDate: plannedDate,
-                receivedAmount: hasReceivedAmount ? receivedAmount : null,
-                receivedDate: hasReceivedDate ? receivedDate : null
+                isUnplanned: isUnplanned,
+                receivedAmount: false ? receivedAmount : null, // Not used since actuals are kept in daily details now
+                receivedDate: false ? receivedDate : null
             };
 
             // Validate
@@ -1011,6 +1194,12 @@ const Modals = {
                     
                     const inc = DataStore.currentMonth.incomes.find(i => i.id === incId);
                     const isUnplanned = inc && inc.isUnplanned;
+                    const descInput = row.querySelector('.unplanned-desc-input');
+                    
+                    if (isUnplanned && descInput) {
+                        const newDesc = descInput.value.trim();
+                        if (newDesc && inc) inc.description = newDesc;
+                    }
                     
                     if (!isNaN(amount) && amount > 0) {
                         entriesToSave.push({ incomeId: incId, amount: amount });
@@ -1124,9 +1313,15 @@ const Modals = {
                         let isUnplanned = false;
                         if (exp) {
                             const cat = DataStore.categories.find(c => c.id === exp.categoryId);
-                            if (cat && cat.name.toLowerCase() === 'não planejadas') {
+                            if (cat && cat.name.toLowerCase() === 'despesas não planejadas') {
                                 isUnplanned = true;
                             }
+                        }
+
+                        const descInput = row.querySelector('.unplanned-desc-input');
+                        if (isUnplanned && exp && descInput) {
+                            const newDesc = descInput.value.trim();
+                            if (newDesc) exp.description = newDesc;
                         }
 
                         if (!isNaN(amount) && amount > 0) {
@@ -1169,9 +1364,9 @@ const Modals = {
 
                 const globalExtras = document.querySelectorAll('#unplanned-new-entries-container .global-extra-expense');
                 if (globalExtras.length > 0) {
-                    let unplannedCat = DataStore.categories.find(c => c.name.toLowerCase() === 'não planejadas');
+                    let unplannedCat = DataStore.categories.find(c => c.name.toLowerCase() === 'despesas não planejadas');
                     if (!unplannedCat) {
-                        unplannedCat = await DataStore.addCategory({ name: 'Não Planejadas', color: '#e74c3c' });
+                        unplannedCat = await DataStore.addCategory({ name: 'Despesas Não Planejadas', color: '#e74c3c' });
                     }
 
                     for (const row of globalExtras) {
@@ -1278,23 +1473,32 @@ const Modals = {
      * Saves expense data collected from the form
      */
     async saveExpenseFromForm() {
-        const plannedDateInput = document.getElementById('expense-planned-date').value.trim().toLowerCase();
+        const plannedDateInput = document.getElementById('expense-planned-date').value.trim();
+        const isFutureReminder = document.getElementById('expense-is-future') ? document.getElementById('expense-is-future').checked : false;
+
         let plannedDate = 0;
-        if (plannedDateInput === 'all' || plannedDateInput === 'fds') {
+        if (isFutureReminder) {
             plannedDate = plannedDateInput;
+        } else if (plannedDateInput.toLowerCase() === 'all' || plannedDateInput.toLowerCase() === 'fds') {
+            plannedDate = plannedDateInput.toLowerCase();
         } else {
             plannedDate = parseInt(plannedDateInput) || 0;
         }
 
+        const categoryId = document.getElementById('expense-category-id').value;
+        const cat = DataStore.categories.find(c => c.id === categoryId);
+        const isUnplanned = cat && cat.name.toLowerCase() === 'despesas não planejadas';
+
         const expense = {
-            categoryId: document.getElementById('expense-category-id').value,
+            categoryId: categoryId,
             description: document.getElementById('expense-description').value.trim(),
-            plannedAmount: parseFloat(document.getElementById('expense-planned-amount').value) || 0,
-            plannedDate: plannedDate,
+            plannedAmount: isUnplanned ? 0 : (parseFloat(document.getElementById('expense-planned-amount').value) || 0),
+            plannedDate: isUnplanned ? null : plannedDate,
+            isFutureReminder: isFutureReminder,
             paidAmount: null,
             paidDate: null,
             isTemplate: document.getElementById('expense-is-template').checked,
-            specialType: document.getElementById('expense-special-type').value || null
+            specialType: isFutureReminder ? null : (document.getElementById('expense-special-type').value || null)
         };
 
         const expenseId = document.getElementById('expense-id').value;

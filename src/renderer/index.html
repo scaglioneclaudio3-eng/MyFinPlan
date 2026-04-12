@@ -66,7 +66,7 @@
                         <div class="category-list-header">
                             <span class="header-color"></span>
                             <span class="header-name">Categoria</span>
-                            <span class="header-future">Lembrete desp. futura</span>
+                            <span class="header-future">Lembrete Despesas Meses Futuros</span>
                             <span class="header-total">Total</span>
                             <span class="header-actions"></span>
                         </div>
@@ -231,6 +231,12 @@
                     <label for="expense-description">Descrição</label>
                     <input type="text" id="expense-description" required maxlength="100">
                 </div>
+                <div class="form-group">
+                    <label style="color: #ffca28;">
+                        <input type="checkbox" id="expense-is-future">
+                        Lembrete Despesas Meses Futuros
+                    </label>
+                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="expense-planned-amount">Valor Previsto (R$)</label>
@@ -297,7 +303,13 @@
                     <label for="income-description">Descrição</label>
                     <input type="text" id="income-description" required maxlength="100">
                 </div>
-                <div class="form-row">
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="income-is-unplanned">
+                        Receita Não Planejada
+                    </label>
+                </div>
+                <div class="form-row" id="income-planned-row">
                     <div class="form-group">
                         <label for="income-planned-amount">Valor Previsto (R$)</label>
                         <input type="text" id="income-planned-amount" required placeholder="0,00">

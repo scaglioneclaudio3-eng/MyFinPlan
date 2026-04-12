@@ -216,17 +216,14 @@ body {
 /* Entry View */
 #entry-view {
     background-color: #c5e1cd;
-}
-
-.entry-container {
+}.entry-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: 1fr 1fr;
     grid-template-areas:
         "expenses income"
         "daily_exp daily_inc";
     gap: var(--spacing-md);
-    /* Reduced from lg to save space */
     height: calc(100% - 80px);
 }
 
@@ -238,6 +235,7 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
 .income-panel {
@@ -248,6 +246,7 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
 .panel-header {
@@ -286,6 +285,7 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: var(--spacing-sm);
+    min-height: 0;
 }
 
 .income-summary {

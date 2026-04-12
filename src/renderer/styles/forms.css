@@ -227,6 +227,10 @@
     margin-top: 0;
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
 }
 
 .daily-expense-panel {
@@ -237,6 +241,10 @@
     margin-top: 0;
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
 }
 
 .daily-income-panel .panel-header,
@@ -245,6 +253,7 @@
     background-color: transparent;
     border-bottom: 1px solid var(--border-color);
     padding: 0 0 var(--spacing-xs) 0;
+    flex-shrink: 0;
 }
 
 .daily-income-grid {
@@ -254,8 +263,10 @@
     gap: var(--spacing-xs);
     max-height: none;
     /* Allow it to fit content, container grid handles layout */
-    overflow-y: visible;
-    padding-right: 0;
+    overflow-y: auto;
+    padding-right: var(--spacing-xs);
+    flex: 1;
+    min-height: 0;
 }
 
 .daily-income-item {

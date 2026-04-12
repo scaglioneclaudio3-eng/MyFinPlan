@@ -31,6 +31,15 @@ const App = {
             }
 
             await DataStore.init();
+
+            // Dump DOM after 3 seconds for debugging
+            setTimeout(async () => {
+                if (window.api && window.api.writeFile) {
+                    await window.api.writeFile('dump.html', document.body.innerHTML);
+                    console.log('DUMPED DOM TO dump.html');
+                }
+            }, 3000);
+
         } catch (error) {
             console.error('DataStore init failed:', error);
             try {

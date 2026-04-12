@@ -79,7 +79,7 @@ const PrintModule = {
             // "Atrasado" from previous months. 
             // It's already overdue by definition.
             return 'atraso';
-        } else if (expense.plannedDate === 0) {
+        } else if (expense.plannedDate === 0 || expense.isFutureReminder) {
             // Future reminder.
             return '-';
         } else {
@@ -195,7 +195,9 @@ const PrintModule = {
                 const paidAmount = expense.paidAmount ? formatCurrency(expense.paidAmount) : '-';
 
                 let dateDisplay = expense.plannedDate;
-                if (dateDisplay === 0) {
+                if (expense.isFutureReminder) {
+                    dateDisplay = expense.plannedDate || 'Futuro';
+                } else if (dateDisplay === 0) {
                     dateDisplay = 'Futuro';
                 } else if (dateDisplay === -1) {
                     dateDisplay = getNextWorkingDay(year, month, 1, holidays);
@@ -262,7 +264,8 @@ const PrintModule = {
         const holidays = DataStore.holidays || [];
 
         // Helper to get sort value and display date
-        const getDateInfo = (plannedDate) => {
+        const getDateInfo = (expense) => {
+            const plannedDate = expense.plannedDate;
             if (plannedDate === -1) {
                 return {
                     sortValue: -1,
@@ -270,11 +273,11 @@ const PrintModule = {
                     label: 'Atrasado / Primeiro Dia Útil'
                 };
             }
-            if (plannedDate === 0) {
+            if (plannedDate === 0 || expense.isFutureReminder) {
                 return {
                     sortValue: 999,
-                    display: 'Futuro',
-                    label: 'Futuro'
+                    display: expense.isFutureReminder ? (plannedDate || 'Futuro') : 'Futuro',
+                    label: expense.isFutureReminder ? (plannedDate || 'Futuro') : 'Futuro'
                 };
             }
             return {
@@ -287,7 +290,7 @@ const PrintModule = {
         // Group expenses by date
         const groupedExpenses = {};
         expenses.forEach(expense => {
-            const dateInfo = getDateInfo(expense.plannedDate);
+            const dateInfo = getDateInfo(expense);
             const key = dateInfo.sortValue;
 
             if (!groupedExpenses[key]) {

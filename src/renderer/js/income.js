@@ -172,6 +172,14 @@ const Income = {
         `;
 
         card.addEventListener('click', () => {
+            if (income.isUnplanned) {
+                if (typeof showToast === 'function') {
+                    showToast('Receitas não previstas só podem ser editadas pelo popup diário.', 'warning');
+                } else if (window.api && window.api.showMessage) {
+                    window.api.showMessage('Receitas não previstas só podem ser editadas pelo popup diário.', 'warning');
+                }
+                return;
+            }
             Modals.openIncomeModal(income);
         });
 

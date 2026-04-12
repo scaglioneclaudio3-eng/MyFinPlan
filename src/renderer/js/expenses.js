@@ -19,7 +19,7 @@ const Expenses = {
      */
     getFutureReminders() {
         if (!DataStore.currentMonth) return [];
-        return DataStore.currentMonth.expenses.filter(e => e.plannedDate === 0);
+        return DataStore.currentMonth.expenses.filter(e => e.isFutureReminder || e.plannedDate === 0);
     },
 
     /**
@@ -78,7 +78,7 @@ const Expenses = {
         }
 
         // Date validation
-        if (expense.plannedDate !== null && expense.plannedDate !== undefined) {
+        if (!expense.isFutureReminder && expense.plannedDate !== null && expense.plannedDate !== undefined) {
             if (expense.plannedDate !== 'all' && expense.plannedDate !== 'fds') {
                 const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
                 if (expense.plannedDate > daysInMonth) {

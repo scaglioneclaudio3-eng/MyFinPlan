@@ -12,7 +12,14 @@ const Categories = {
         const container = document.getElementById('categories-container');
         container.innerHTML = '';
 
-        const sortedCategories = [...DataStore.categories].sort((a, b) => a.order - b.order);
+        const currentMonthId = DataStore.currentMonth?.id;
+        
+        const sortedCategories = [...DataStore.categories]
+            .filter(cat => {
+                if (!cat.hiddenFrom) return true;
+                return currentMonthId < cat.hiddenFrom;
+            })
+            .sort((a, b) => a.order - b.order);
 
         for (const category of sortedCategories) {
             const card = this.createCategoryCard(category);
@@ -204,7 +211,7 @@ const Categories = {
             }
         }
         
-        const isUnplannedCat = category.name.toLowerCase() === 'não planejadas';
+        const isUnplannedCat = category.name.toLowerCase() === 'despesas não planejadas';
 
         const card = document.createElement('div');
         card.className = 'category-card';
@@ -227,7 +234,7 @@ const Categories = {
                 </div>
                 <div class="category-actions">
                     <button class="edit-category-btn" title="Editar">✏️</button>
-                    <button class="delete-category-btn" title="Excluir">🗑️</button>
+                    ${!isUnplannedCat ? `<button class="delete-category-btn" title="Excluir">🗑️</button>` : `<button title="Não é possível excluir esta categoria" disabled style="opacity: 0.3; cursor: not-allowed; background: transparent; border: none; font-size: 1.2em;">🗑️</button>`}
                     <button class="toggle-category-btn" title="Expandir">▼</button>
                 </div>
             </div>
@@ -260,10 +267,12 @@ const Categories = {
             Modals.openCategoryModal(category);
         });
 
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.confirmDelete(category);
-        });
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.confirmDelete(category);
+            });
+        }
 
         return card;
     },
@@ -274,10 +283,13 @@ const Categories = {
      * @param {Object} category - The category
      */
     createExpenseTable(expenses, category) {
+        const isUnplannedCat = category.name.toLowerCase() === 'despesas não planejadas';
+        const addBtnHtml = `<button class="add-expense-btn" data-category-id="${category.id}">+ Adicionar Despesa</button>`;
+
         if (expenses.length === 0) {
             return `
                 <p class="text-center text-muted">Nenhuma despesa nesta categoria</p>
-                <button class="add-expense-btn" data-category-id="${category.id}">+ Adicionar Despesa</button>
+                ${addBtnHtml}
             `;
         }
 
@@ -286,7 +298,6 @@ const Categories = {
         const month = DataStore.currentMonth?.month || (new Date().getMonth() + 1);
         const holidays = DataStore.holidays || [];
 
-        const isUnplannedCat = category.name.toLowerCase() === 'não planejadas';
 
         let html = `
             <table class="expense-table" style="table-layout: fixed; width: 100%;">
@@ -315,8 +326,9 @@ const Categories = {
             }
 
             // Prefix description for future expenses
-            const descriptionDisplay = expense.plannedDate === 0
-                ? `<span class="text-muted">Lembrete desp. futura:</span> ${expense.description}`
+            const isFutureReminder = expense.isFutureReminder || expense.plannedDate === 0;
+            const descriptionDisplay = isFutureReminder
+                ? `<span class="text-muted">Lembrete Despesas Meses Futuros:</span> ${expense.description}`
                 : expense.description;
 
             let paidTotalExp = 0;
@@ -336,13 +348,32 @@ const Categories = {
             }
 
             const plannedAmountObjStr = (expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-';
-            const plannedAmountHtml = !isUnplannedCat 
-                ? `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`
-                : '';
+            
+            let plannedAmountHtml = '';
+            if (!isUnplannedCat) {
+                if (isFutureReminder) {
+                    plannedAmountHtml = `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
+                } else {
+                    plannedAmountHtml = `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
+                }
+            }
                 
-            const paidAmountHtml = paidTotalExp > 0 
-                ? `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">pago:</span><strong style="display: inline-block; width: 85px; text-align: right;">${formatCurrency(paidTotalExp)}</strong></div>` 
-                : '';
+            let paidAmountHtml = '';
+            if (paidTotalExp > 0) {
+                if (isFutureReminder) {
+                    paidAmountHtml = `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><strong style="display: inline-block; width: 85px; text-align: right;">${formatCurrency(paidTotalExp)}</strong></div>`;
+                } else {
+                    paidAmountHtml = `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">pago:</span><strong style="display: inline-block; width: 85px; text-align: right;">${formatCurrency(paidTotalExp)}</strong></div>`;
+                }
+            }
+            
+            let dateDisplay = expense.plannedDate;
+            if (expense.plannedDate === 0) {
+                dateDisplay = 'Futuro';
+            } else if (isFutureReminder) {
+                // Keep the raw string user entered
+                dateDisplay = expense.plannedDate;
+            }
 
             html += `
                 <tr data-expense-id="${expense.id}" data-category-id="${category.id}">
@@ -352,7 +383,7 @@ const Categories = {
                         ${paidAmountHtml}
                     </td>
                     <td class="date" style="text-align: right; vertical-align: top;">
-                        <div>${expense.plannedDate === 0 ? 'Futuro' : expense.plannedDate}</div>
+                        <div>${dateDisplay}</div>
                         ${paidTotalExp > 0 ? `<div style="color: var(--success-color); margin-top: 2px; font-size: 0.9em;">dia(s) ${paidDatesExp.join(', ')}</div>` : ''}
                     </td>
                 </tr>
@@ -362,7 +393,7 @@ const Categories = {
         html += `
                 </tbody>
             </table>
-            <button class="add-expense-btn" data-category-id="${category.id}">+ Adicionar Despesa</button>
+            ${addBtnHtml}
         `;
 
         return html;
@@ -373,16 +404,81 @@ const Categories = {
      * @param {Object} category - The category to delete
      */
     async confirmDelete(category) {
+        if (category.name.toLowerCase() === 'despesas não planejadas') {
+            if (typeof showToast === 'function') {
+                showToast('A categoria "Despesas Não Planejadas" não pode ser excluída.', 'error');
+            } else if (window.api && window.api.showMessage) {
+                window.api.showMessage('A categoria "Despesas Não Planejadas" não pode ser excluída.', 'error');
+            }
+            return;
+        }
+
+        // Check if we are trying to delete from a past month
+        const now = new Date();
+        const currentY = now.getFullYear();
+        const currentM = now.getMonth() + 1;
+        const targetY = parseInt(DataStore.currentMonth?.year || currentY);
+        const targetM = parseInt(DataStore.currentMonth?.month || currentM);
+        const isPast = (targetY < currentY) || (targetY === currentY && targetM < currentM);
+
+        if (isPast) {
+            if (typeof showToast === 'function') {
+                showToast('A deleção de categorias não pode ser realizada em meses passados para preservar o histórico financeiro.', 'error', 6000);
+            } else if (window.api && window.api.showMessage) {
+                window.api.showMessage('A deleção de categorias não pode ser realizada em meses passados para preservar o histórico financeiro.', 'error');
+            }
+            return;
+        }
+
+        // Check for effective daily expenses across the entire month
+        let hasEffectiveExpenses = false;
+        const detailsObj = DataStore.currentMonth?.dailyActualExpenseDetails || {};
+        for (const [day, catGroups] of Object.entries(detailsObj)) {
+            if (catGroups[category.id] && catGroups[category.id].length > 0) {
+                const hasValidItems = catGroups[category.id].some(item => (item.amount || 0) > 0 || item.description);
+                if (hasValidItems) {
+                    hasEffectiveExpenses = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasEffectiveExpenses) {
+            const autoDelete = await window.api.showConfirm(
+                `Existem despesas efetivas (pagas) registradas para a categoria "${category.name}" no mês atual.\n\nDeseja deletar todas as despesas diárias (efetivas) vinculadas a esta categoria automaticamente e, em seguida, excluí-la?`
+            );
+
+            if (!autoDelete) {
+                // User chose not to auto-delete, so we abort
+                return;
+            } else {
+                // Perform auto delete of actual expenses
+                let changed = false;
+                for (const [day, catGroups] of Object.entries(detailsObj)) {
+                    if (catGroups[category.id]) {
+                        delete catGroups[category.id];
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    await DataStore.saveMonth();
+                }
+            }
+        }
+
         const expenseCount = DataStore.currentMonth?.expenses.filter(e => e.categoryId === category.id).length || 0;
 
         const message = expenseCount > 0
-            ? `Tem certeza que deseja excluir a categoria "${category.name}"? ${expenseCount} despesa(s) serão movidas para "Sem Categoria".`
-            : `Tem certeza que deseja excluir a categoria "${category.name}"?`;
+            ? `Tem certeza que deseja excluir a categoria "${category.name}"?\nEsta categoria será deletada somente do mês acessado em diante e não aparecerá nos meses futuros.\n\nAtenção: ${expenseCount} despesa(s) planejada(s) vinculada(s) a ela será(ão) CANCELADA(S) e removida(s).`
+            : `Tem certeza que deseja excluir a categoria "${category.name}"?\nEsta categoria será deletada somente do mês acessado em diante e não aparecerá nos meses futuros.`;
 
         if (await window.api.showConfirm(message)) {
             await DataStore.deleteCategory(category.id);
             this.render();
-            showToast('Categoria excluída', 'success');
+            if (typeof App !== 'undefined' && App.updateSummary) App.updateSummary();
+            if (typeof showToast === 'function') {
+                showToast('Categoria excluída', 'success');
+            }
         }
     },
 
@@ -402,7 +498,18 @@ const Categories = {
                 const expenseId = row.dataset.expenseId;
                 const categoryId = row.dataset.categoryId;
                 const expense = DataStore.currentMonth?.expenses.find(ex => ex.id === expenseId);
+                const category = DataStore.categories.find(c => c.id === categoryId);
+                const isUnplannedCat = category && category.name.toLowerCase() === 'despesas não planejadas';
+                
                 if (expense) {
+                    if (isUnplannedCat) {
+                        if (typeof showToast === 'function') {
+                            showToast('Despesas não planejadas só podem ser editadas pelo popup diário.', 'warning');
+                        } else if (window.api && window.api.showMessage) {
+                            window.api.showMessage('Despesas não planejadas só podem ser editadas pelo popup diário.', 'warning');
+                        }
+                        return;
+                    }
                     Modals.openExpenseModal(expense, categoryId);
                 }
             }

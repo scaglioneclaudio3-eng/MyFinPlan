@@ -99,6 +99,24 @@ const DataStore = {
             this.categories = [...this.defaultCategories];
             await this.saveCategories();
         }
+
+        let hasChanges = false;
+        
+        const oldCat = this.categories.find(c => c.name.toLowerCase() === 'não planejadas');
+        if (oldCat) {
+            oldCat.name = 'Despesas Não Planejadas';
+            hasChanges = true;
+        }
+
+        if (!this.categories.some(c => c.name.toLowerCase() === 'despesas não planejadas')) {
+            this.categories.push({ id: 'unplanned-cat-id', name: 'Despesas Não Planejadas', color: '#808080', order: 999 });
+            hasChanges = true;
+        }
+        
+        if (hasChanges) {
+            await this.saveCategories();
+        }
+
         return this.categories;
     },
 
@@ -145,7 +163,25 @@ const DataStore = {
      * @param {string} id - Category ID
      */
     async deleteCategory(id) {
-        this.categories = this.categories.filter(c => c.id !== id);
+        if (!this.currentMonth) return;
+        
+        // Hide the category from this month onwards instead of permanent deletion
+        // to preserve historical financial data.
+        const index = this.categories.findIndex(c => c.id === id);
+        if (index !== -1) {
+            this.categories[index].hiddenFrom = this.currentMonth.id;
+        }
+
+        // Cancel (delete) planned expenses associated with the deleted category
+        if (this.currentMonth && this.currentMonth.expenses) {
+            const initialLength = this.currentMonth.expenses.length;
+            this.currentMonth.expenses = this.currentMonth.expenses.filter(e => e.categoryId !== id);
+            
+            if (this.currentMonth.expenses.length !== initialLength) {
+                await this.saveMonth();
+            }
+        }
+
         await this.saveCategories();
     },
 

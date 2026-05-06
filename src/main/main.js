@@ -12,7 +12,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Configure auto-updater logging
-autoUpdater.logger = console;
+autoUpdater.logger = true;
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 

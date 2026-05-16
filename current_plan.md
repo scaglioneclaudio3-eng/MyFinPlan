@@ -1,10 +1,10 @@
-# Current Plan - Formatação Lembrete Despesas Futuras
+# Current Plan - Restringir Formatação Lembrete Despesas Futuras
 
 - status: done
-- goal: Ajustar o painel de despesas planejadas para alterar a exibição de "Lembrete despesas meses futuros:" para "Futuro:" e exibir o valor nesta mesma linha de texto, retirando-o da coluna de valores. Além disso, reforçar a validação da data destas despesas para exigir o mês com três letras e, opcionalmente, "dia, mês".
+- goal: Garantir que despesas planejadas normais aceitem apenas um número do dia do mês (ou os termos "all" e "fds"), proibindo estritamente a entrada de formatos como o mês por escrito (ex: "jan"). Formatos textuais de meses futuros agora só são aceitos quando a caixa "Lembrete Despesas Meses Futuros" estiver devidamente selecionada.
 
 ## Steps
-1. [x] Modificar em `categories.js` a exibição da label de despesas futuras para "Futuro:" e incluir o `plannedAmountObjStr` direto nesta string.
-2. [x] Remover as variáveis de renderização de valor planejado e pago nas colunas do quadro para `isFutureReminder`, de modo que a coluna de valores fique vazia nestes itens.
-3. [x] Modificar em `modals.js` a validação e processamento do submit de formulário (`saveExpenseFromForm`) de despesas para impor uso do formato "(dia), (mês)" onde o mês tem 3 letras.
-4. [x] Atualizar o placeholder de ajuda no campo de data da modal para exibir as novas instruções de formatação.
+1. [x] Modificar em `modals.js` a validação de data (`saveExpenseFromForm`) de despesas não futuras para usar regex restritivo de números.
+2. [x] Adicionar checagem matemática para garantir que o número numérico é <= ao limite de dias do mês, com exceção de `-1`.
+3. [x] Exibir os alertas/toast apropriados informando os erros do usuário com clareza.
+4. [x] Compilar código JavaScript com ferramentas de teste do Node para prevenir quebras.

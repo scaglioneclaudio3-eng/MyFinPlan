@@ -1478,7 +1478,30 @@ const Modals = {
         } else if (plannedDateInput.toLowerCase() === 'all' || plannedDateInput.toLowerCase() === 'fds') {
             plannedDate = plannedDateInput.toLowerCase();
         } else {
+            const regex = /^-?\d+$/;
+            if (!regex.test(plannedDateInput)) {
+                if (typeof showToast === 'function') {
+                    showToast('Data inválida. Insira um dia numérico, "all" ou "fds". Para mês futuro, marque Lembrete.', 'error');
+                } else if (window.api && window.api.showMessage) {
+                    window.api.showMessage('Data inválida. Insira um dia numérico, "all" ou "fds". Para mês futuro, marque Lembrete.', 'error');
+                }
+                return;
+            }
+
             plannedDate = parseInt(plannedDateInput) || 0;
+            
+            const year = DataStore.currentMonth?.year || new Date().getFullYear();
+            const month = DataStore.currentMonth?.month || new Date().getMonth() + 1;
+            const daysInMonth = typeof getDaysInMonth === 'function' ? getDaysInMonth(year, month) : 31;
+            
+            if (plannedDate !== -1 && (plannedDate < 1 || plannedDate > daysInMonth)) {
+                if (typeof showToast === 'function') {
+                    showToast(`O dia deve ser entre 1 e ${daysInMonth} para o mês atual, ou -1 para atrasado.`, 'error');
+                } else if (window.api && window.api.showMessage) {
+                    window.api.showMessage(`O dia deve ser entre 1 e ${daysInMonth} para o mês atual, ou -1 para atrasado.`, 'error');
+                }
+                return;
+            }
         }
 
         const categoryId = document.getElementById('expense-category-id').value;

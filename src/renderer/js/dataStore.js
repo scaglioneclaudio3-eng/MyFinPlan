@@ -102,14 +102,20 @@ const DataStore = {
 
         let hasChanges = false;
         
-        const oldCat = this.categories.find(c => c.name.toLowerCase() === 'não planejadas');
+        const oldCat = this.categories.find(c => c.name.toLowerCase() === 'não planejadas' || c.name.toLowerCase() === 'despesas não planejadas');
         if (oldCat) {
-            oldCat.name = 'Despesas Não Planejadas';
-            hasChanges = true;
+            if (oldCat.name !== 'Categorias Não Planejadas') {
+                oldCat.name = 'Categorias Não Planejadas';
+                hasChanges = true;
+            }
+            if (oldCat.color !== '#8a2be2') {
+                oldCat.color = '#8a2be2';
+                hasChanges = true;
+            }
         }
 
-        if (!this.categories.some(c => c.name.toLowerCase() === 'despesas não planejadas')) {
-            this.categories.push({ id: 'unplanned-cat-id', name: 'Despesas Não Planejadas', color: '#808080', order: 999 });
+        if (!this.categories.some(c => c.name.toLowerCase() === 'categorias não planejadas')) {
+            this.categories.push({ id: 'unplanned-cat-id', name: 'Categorias Não Planejadas', color: '#8a2be2', order: 999 });
             hasChanges = true;
         }
         

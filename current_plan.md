@@ -1,9 +1,11 @@
-# Current Plan - Remover Opção de Receita Não Planejada do Popup
+# Current Plan - Renomear Categoria Não Planejada
 
 - status: done
-- goal: Retirar dos popups de receitas esperadas a opção de serem marcadas como "receitas não planejadas", já que agora devem ser obrigatoriamente registradas no quadro "Receitas Efetivas Diárias".
+- goal: Altere a descrição da categoria "Despesas não planejadas" para "Categorias não planejadas". Tornar a cor fixa em violeta (#8a2be2) e inalterável, assim como o nome e proibir sua exclusão.
 
 ## Steps
-1. [x] Remover o elemento do checkbox (`#income-is-unplanned`) no arquivo `src/renderer/index.html`.
-2. [x] Modificar a lógica do `src/renderer/js/modals.js` para que não cause erros sem a presença do checkbox, forçando a flag `isUnplanned` para `false` no modal de adição e salvamento de novas receitas esperadas.
-3. [x] Verificar a integridade do código usando análise estática do Node.
+1. [x] Modificar o nome padrão no array de inicialização e no script de migração do `dataStore.js` para "Categorias Não Planejadas" e cor "#8a2be2".
+2. [x] Atualizar as checagens e lógicas espalhadas no `categories.js` de 'despesas não planejadas' para 'categorias não planejadas'.
+3. [x] Atualizar as lógicas no `modals.js` para a mesma string, e travar edição de nome e cor desta categoria no popup correspondente.
+4. [x] Atualizar referências da documentação em `app.js`.
+5. [x] Realizar teste de lint e checar a compilação do JS alterado.

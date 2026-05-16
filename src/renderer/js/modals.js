@@ -103,8 +103,21 @@ const Modals = {
             nameInput.value = category.name;
             colorInput.value = category.color;
             form.dataset.categoryId = category.id;
+            
+            if (category.name.toLowerCase() === 'categorias não planejadas') {
+                nameInput.readOnly = true;
+                colorInput.disabled = true;
+                colorInput.style.pointerEvents = 'none';
+            } else {
+                nameInput.readOnly = false;
+                colorInput.disabled = false;
+                colorInput.style.pointerEvents = 'auto';
+            }
         } else {
             title.textContent = 'Nova Categoria';
+            nameInput.readOnly = false;
+            colorInput.disabled = false;
+            colorInput.style.pointerEvents = 'auto';
             nameInput.value = '';
             colorInput.value = '#4a90d9';
             delete form.dataset.categoryId;
@@ -143,8 +156,8 @@ const Modals = {
         if (expense) {
             // Strictly block unplanned expense editing via main modal
             const checkCat = DataStore.categories.find(c => c.id === expense.categoryId);
-            if (checkCat && checkCat.name.toLowerCase() === 'despesas não planejadas') {
-                if (typeof showToast === 'function') showToast('Despesas não planejadas só podem ser editadas pelo popup diário.', 'warning');
+            if (checkCat && checkCat.name.toLowerCase() === 'categorias não planejadas') {
+                if (typeof showToast === 'function') showToast('Despesas dessa categoria só podem ser editadas pelo popup diário.', 'warning');
                 return;
             }
 
@@ -191,7 +204,7 @@ const Modals = {
         let isUnplanned = false;
         if (activeCatId) {
             const cat = DataStore.categories.find(c => c.id === activeCatId);
-            if (cat && cat.name.toLowerCase() === 'despesas não planejadas') {
+            if (cat && cat.name.toLowerCase() === 'categorias não planejadas') {
                 isUnplanned = true;
             }
         }
@@ -639,7 +652,7 @@ const Modals = {
                 catPlanned.forEach(plannedExp => {
                     const savedActual = catActuals.find(a => a.expenseId === plannedExp.id);
                     const actualValue = savedActual ? savedActual.amount : '';
-                    const isUnplannedCat = cat.name.toLowerCase() === 'despesas não planejadas';
+                    const isUnplannedCat = cat.name.toLowerCase() === 'categorias não planejadas';
                     const descHtml = isUnplannedCat 
                         ? `<input type="text" class="editable-input unplanned-desc-input form-control" value="${plannedExp.description}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>` 
                         : `${plannedExp.description}`;
@@ -891,7 +904,7 @@ const Modals = {
             // Check for worker expense non-standard dates
             const categoryId = document.getElementById('expense-category-id').value;
             const cat = DataStore.categories.find(c => c.id === categoryId);
-            const isUnplanned = cat && cat.name.toLowerCase() === 'despesas não planejadas';
+            const isUnplanned = cat && cat.name.toLowerCase() === 'categorias não planejadas';
             
             const isWorkerExpense = ['SALARY_ADVANCE', 'INSS', 'FGTS', 'FIFTH_WORKING_DAY', 'VALE_TRANSPORTE', 'VALE_ALIMENTACAO', 'CESTA_BASICA'].includes(specialType);
             const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
@@ -1284,7 +1297,7 @@ const Modals = {
                         let isUnplanned = false;
                         if (exp) {
                             const cat = DataStore.categories.find(c => c.id === exp.categoryId);
-                            if (cat && cat.name.toLowerCase() === 'despesas não planejadas') {
+                            if (cat && cat.name.toLowerCase() === 'categorias não planejadas') {
                                 isUnplanned = true;
                             }
                         }
@@ -1335,9 +1348,9 @@ const Modals = {
 
                 const globalExtras = document.querySelectorAll('#unplanned-new-entries-container .global-extra-expense');
                 if (globalExtras.length > 0) {
-                    let unplannedCat = DataStore.categories.find(c => c.name.toLowerCase() === 'despesas não planejadas');
+                    let unplannedCat = DataStore.categories.find(c => c.name.toLowerCase() === 'categorias não planejadas');
                     if (!unplannedCat) {
-                        unplannedCat = await DataStore.addCategory({ name: 'Despesas Não Planejadas', color: '#e74c3c' });
+                        unplannedCat = await DataStore.addCategory({ name: 'Categorias Não Planejadas', color: '#8a2be2' });
                     }
 
                     for (const row of globalExtras) {
@@ -1458,7 +1471,7 @@ const Modals = {
 
         const categoryId = document.getElementById('expense-category-id').value;
         const cat = DataStore.categories.find(c => c.id === categoryId);
-        const isUnplanned = cat && cat.name.toLowerCase() === 'despesas não planejadas';
+        const isUnplanned = cat && cat.name.toLowerCase() === 'categorias não planejadas';
 
         const expense = {
             categoryId: categoryId,

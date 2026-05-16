@@ -1,11 +1,9 @@
-# Current Plan - Fix Empty Screens on App Launch
+# Current Plan - Remover Opção de Receita Não Planejada do Popup
 
-- status: in-progress
-- goal: Resolve the issue where the application opens with empty screens without fields or data.
+- status: done
+- goal: Retirar dos popups de receitas esperadas a opção de serem marcadas como "receitas não planejadas", já que agora devem ser obrigatoriamente registradas no quadro "Receitas Efetivas Diárias".
 
 ## Steps
-1. [x] Investigate application initialization logs (run `npm start`).
-2. [x] Identify which JS file or module fails to load or execute.
-3. [x] Fix any undefined errors or incorrect loading logic in `app.js` or `dataStore.js`.
-4. [x] Verify that UI properly renders data input fields.
-5. [x] Ensure tests/linters pass if configured.
+1. [x] Remover o elemento do checkbox (`#income-is-unplanned`) no arquivo `src/renderer/index.html`.
+2. [x] Modificar a lógica do `src/renderer/js/modals.js` para que não cause erros sem a presença do checkbox, forçando a flag `isUnplanned` para `false` no modal de adição e salvamento de novas receitas esperadas.
+3. [x] Verificar a integridade do código usando análise estática do Node.

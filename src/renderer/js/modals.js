@@ -302,37 +302,14 @@ const Modals = {
         document.getElementById('income-modal-title').textContent = income ? 'Editar Receita' : 'Nova Receita';
         document.getElementById('delete-income-btn').style.display = income ? 'block' : 'none';
 
-        const isUnplannedCb = document.getElementById('income-is-unplanned');
         const plannedRow = document.getElementById('income-planned-row');
-        isUnplannedCb.checked = false;
-
-        isUnplannedCb.onchange = (e) => {
-            if (e.target.checked) {
-                plannedRow.style.display = 'none';
-                document.getElementById('income-planned-amount').required = false;
-                document.getElementById('income-planned-date').required = false;
-                document.getElementById('income-planned-amount').value = '0';
-                document.getElementById('income-planned-date').value = 'all';
-            } else {
-                plannedRow.style.display = '';
-                document.getElementById('income-planned-amount').required = true;
-                document.getElementById('income-planned-date').required = true;
-                document.getElementById('income-planned-amount').value = '';
-                document.getElementById('income-planned-date').value = '';
-            }
-        };
+        plannedRow.style.display = '';
+        document.getElementById('income-planned-amount').required = true;
+        document.getElementById('income-planned-date').required = true;
 
         if (income) {
             document.getElementById('income-id').value = income.id;
             document.getElementById('income-description').readOnly = false;
-            
-            if (income.isUnplanned) {
-                isUnplannedCb.checked = true;
-            } else {
-                isUnplannedCb.checked = false;
-            }
-            // Trigger UI update
-            isUnplannedCb.onchange({ target: isUnplannedCb });
 
             document.getElementById('income-planned-amount').readOnly = false;
             document.getElementById('income-planned-date').readOnly = false;
@@ -372,7 +349,6 @@ const Modals = {
             document.getElementById('income-planned-date').value = ''; // Default for new income (empty allows editing)
             document.getElementById('income-received-amount').value = '';
             document.getElementById('income-received-date').value = '';
-            isUnplannedCb.onchange({ target: isUnplannedCb });
         }
 
         this.open('income-modal');
@@ -981,15 +957,10 @@ const Modals = {
             e.preventDefault();
 
             // Parse planned date
-            const isUnplannedCb = document.getElementById('income-is-unplanned');
-            const isUnplanned = isUnplannedCb ? isUnplannedCb.checked : false;
-            
             const plannedDateInput = document.getElementById('income-planned-date').value.trim().toLowerCase();
             let plannedDate = 'all';
 
-            if (isUnplanned) {
-                plannedDate = null;
-            } else if (plannedDateInput === 'all') {
+            if (plannedDateInput === 'all') {
                 plannedDate = 'all';
             } else {
                 const day = parseInt(plannedDateInput);
@@ -1016,7 +987,7 @@ const Modals = {
             };
 
             const plannedAmountVal = document.getElementById('income-planned-amount').value;
-            const plannedAmount = isUnplanned ? 0 : parseAmount(plannedAmountVal);
+            const plannedAmount = parseAmount(plannedAmountVal);
 
             const receivedAmountVal = document.getElementById('income-received-amount').value;
             const receivedAmount = receivedAmountVal ? parseAmount(receivedAmountVal) : NaN;
@@ -1024,7 +995,7 @@ const Modals = {
             const receivedDateVal = document.getElementById('income-received-date').value;
             const receivedDate = receivedDateVal ? parseInt(receivedDateVal) : null;
 
-            if (!isUnplanned) {
+            if (true) {
                 // --- STRICT VALIDATION RULES ---
 
                 // Rule 1: Planned Amount and Date must form a complete pair
@@ -1080,7 +1051,7 @@ const Modals = {
                 description: description,
                 plannedAmount: plannedAmount || 0,
                 plannedDate: plannedDate,
-                isUnplanned: isUnplanned,
+                isUnplanned: false,
                 receivedAmount: false ? receivedAmount : null, // Not used since actuals are kept in daily details now
                 receivedDate: false ? receivedDate : null
             };

@@ -12,3 +12,4 @@
 6. [x] Atribuir `font-family: 'Consolas', monospace;` ao `futureAmountHtml` na tabela para que seus números tenham exata mesma proporção visual dos demais valores.
 7. [x] Corrigir bug no filtro `futureExpenses` que ignorava lembretes com datas em formato de texto (ex: "jan"), garantindo que a soma apareça corretamente no cabeçalho.
 8. [x] Ajustar alinhamento do título principal "Lembrete Despesas Meses Futuros" para o centro através de `text-align: center`.
+9. [x] Modificar lógica de auto-cópia na inicialização do mês para persistir `plannedAmount` e `isFutureReminder` integrais ao invés de resetá-los a zero.

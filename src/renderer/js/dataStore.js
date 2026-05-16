@@ -246,8 +246,9 @@ const DataStore = {
                         id: generateId(),
                         categoryId: t.categoryId,
                         description: t.description, // Keep description
-                        plannedAmount: 0, // Reset amount to 0 (displays as "-")
+                        plannedAmount: t.plannedAmount, // Copy exact amount as requested
                         plannedDate: t.plannedDate, // Keep date
+                        isFutureReminder: t.isFutureReminder || false, // Keep future state
                         paidAmount: null,
                         paidDate: null,
                         isTemplate: true, // Keep checked
@@ -263,7 +264,7 @@ const DataStore = {
             if (copiedCount > 0) {
                 // Defer toast slightly to ensure UI is ready or just fire it
                 setTimeout(() => {
-                    showToast(`${copiedCount} despesas recorrentes copiadas. Por favor preencha o valor.`, 'info', 5000);
+                    showToast(`${copiedCount} despesas recorrentes inseridas automaticamente.`, 'info', 5000);
                 }, 1000);
             }
         }

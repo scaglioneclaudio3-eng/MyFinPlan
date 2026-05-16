@@ -310,7 +310,7 @@ const Categories = {
                 <thead>
                     <tr>
                         <th>Descrição</th>
-                        <th class="future-amount" style="text-align: right; padding-right: 18px; color: #87ceeb; font-weight: normal; font-size: 0.85em; vertical-align: bottom; line-height: 1.1;">Lembrete despesas<br>meses futuros</th>
+                        <th class="future-amount"></th>
                         <th class="amount" style="text-align: right; padding-right: 18px;"></th>
                         <th class="date" style="text-align: right;">Dia</th>
                     </tr>

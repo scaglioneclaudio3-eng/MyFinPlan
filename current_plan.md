@@ -10,3 +10,4 @@
 4. [x] Criar uma nova variável `futureAmountHtml` populada somente para despesas do tipo lembrete (`isFutureReminder`), utilizando a cor `skyblue` (#87ceeb).
 5. [x] Renderizar no `<tbody>` o conteúdo das 4 colunas para cada despesa perfeitamente alinhadas no layout.
 6. [x] Testar compilação do JavaScript com Node.js para prevenir falhas.
+7. [x] Remover título redundante da coluna em `categories.js` pois o título principal já cobre essa área.

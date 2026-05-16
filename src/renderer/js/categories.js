@@ -198,8 +198,7 @@ const Categories = {
         }
 
         // Map to formatted values string
-        const futureValues = futureExpenses.map(e => formatCurrency(e.plannedAmount || 0));
-        const futureValuesDisplay = futureValues.join(' | ');
+        const futureTotal = futureExpenses.reduce((sum, e) => sum + (e.plannedAmount || 0), 0);
 
         let paidTotal = 0;
         const detailsObj = DataStore.currentMonth?.dailyActualExpenseDetails || {};
@@ -219,8 +218,8 @@ const Categories = {
 
         // HTML for Future Total Column (only if > 0 items)
         // Using a distinct class for styling
-        const futureTotalHtml = futureValues.length > 0
-            ? `<span class="category-future-total" title="Lembretes Futuros: ${futureValuesDisplay}">${futureValuesDisplay}</span>`
+        const futureTotalHtml = futureTotal > 0
+            ? `<span class="category-future-total" style="color: #87ceeb; font-size: 0.9em; font-weight: bold; display: flex; align-items: center; justify-content: flex-end; padding-right: 15px;">${formatCurrency(futureTotal)}</span>`
             : '<span class="category-future-total"></span>'; // Placeholder to keep alignment if needed, or empty
 
         card.innerHTML = `
@@ -330,9 +329,7 @@ const Categories = {
             // Prefix description for future expenses
             const isFutureReminder = expense.isFutureReminder || expense.plannedDate === 0;
             const plannedAmountObjStr = (expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-';
-            const descriptionDisplay = isFutureReminder
-                ? `<span class="text-muted">Futuro:</span> ${expense.description}`
-                : expense.description;
+            const descriptionDisplay = expense.description;
 
             let paidTotalExp = 0;
             let paidDatesExp = [];

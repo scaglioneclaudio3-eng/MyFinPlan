@@ -367,8 +367,7 @@ body {
 }
 
 .header-future {
-    text-align: right;
-    padding-right: var(--spacing-md);
+    text-align: center;
 }
 
 .header-total {

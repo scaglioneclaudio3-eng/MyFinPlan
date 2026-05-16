@@ -1,10 +1,12 @@
-# Current Plan - Restringir Formatação Lembrete Despesas Futuras
+# Current Plan - Coluna Separada para Lembretes Futuros
 
 - status: done
-- goal: Garantir que despesas planejadas normais aceitem apenas um número do dia do mês (ou os termos "all" e "fds"), proibindo estritamente a entrada de formatos como o mês por escrito (ex: "jan"). Formatos textuais de meses futuros agora só são aceitos quando a caixa "Lembrete Despesas Meses Futuros" estiver devidamente selecionada.
+- goal: Criar uma nova coluna na tabela de despesas planejadas com o título "Lembrete despesas meses futuros" e exibir o valor nela, destacando com a cor azul céu para diferenciar da descrição e da coluna principal de valores do mês atual.
 
 ## Steps
-1. [x] Modificar em `modals.js` a validação de data (`saveExpenseFromForm`) de despesas não futuras para usar regex restritivo de números.
-2. [x] Adicionar checagem matemática para garantir que o número numérico é <= ao limite de dias do mês, com exceção de `-1`.
-3. [x] Exibir os alertas/toast apropriados informando os erros do usuário com clareza.
-4. [x] Compilar código JavaScript com ferramentas de teste do Node para prevenir quebras.
+1. [x] Modificar em `categories.js` a renderização do `<thead>` da tabela de despesas para incluir uma nova coluna `<th>` com título de Lembrete.
+2. [x] Ajustar os tamanhos de coluna no elemento `<colgroup>` (`auto`, `140px`, `175px`, `90px`) para comportar a nova separação sem quebrar a proporção.
+3. [x] Remover o valor da string `descriptionDisplay`.
+4. [x] Criar uma nova variável `futureAmountHtml` populada somente para despesas do tipo lembrete (`isFutureReminder`), utilizando a cor `skyblue` (#87ceeb).
+5. [x] Renderizar no `<tbody>` o conteúdo das 4 colunas para cada despesa perfeitamente alinhadas no layout.
+6. [x] Testar compilação do JavaScript com Node.js para prevenir falhas.

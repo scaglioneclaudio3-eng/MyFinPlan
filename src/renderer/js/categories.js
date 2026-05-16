@@ -303,12 +303,14 @@ const Categories = {
             <table class="expense-table" style="table-layout: fixed; width: 100%;">
                 <colgroup>
                     <col style="width: auto;">
+                    <col style="width: 140px;">
                     <col style="width: 175px;">
-                    <col style="width: 100px;">
+                    <col style="width: 90px;">
                 </colgroup>
                 <thead>
                     <tr>
                         <th>Descrição</th>
+                        <th class="future-amount" style="text-align: right; padding-right: 18px; color: #87ceeb; font-weight: normal; font-size: 0.85em; vertical-align: bottom; line-height: 1.1;">Lembrete despesas<br>meses futuros</th>
                         <th class="amount" style="text-align: right; padding-right: 18px;"></th>
                         <th class="date" style="text-align: right;">Dia</th>
                     </tr>
@@ -329,7 +331,7 @@ const Categories = {
             const isFutureReminder = expense.isFutureReminder || expense.plannedDate === 0;
             const plannedAmountObjStr = (expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-';
             const descriptionDisplay = isFutureReminder
-                ? `<span class="text-muted">Futuro: ${plannedAmountObjStr} -</span> ${expense.description}`
+                ? `<span class="text-muted">Futuro:</span> ${expense.description}`
                 : expense.description;
 
             let paidTotalExp = 0;
@@ -346,6 +348,11 @@ const Categories = {
                         }
                     }
                 }
+            }
+
+            let futureAmountHtml = '';
+            if (isFutureReminder) {
+                futureAmountHtml = `<div style="color: #87ceeb; display: flex; justify-content: flex-end; width: 100%;"><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
             }
 
             let plannedAmountHtml = '';
@@ -369,7 +376,10 @@ const Categories = {
             html += `
                 <tr data-expense-id="${expense.id}" data-category-id="${category.id}">
                     <td>${descriptionDisplay}</td>
-                    <td class="amount">
+                    <td class="future-amount" style="vertical-align: top;">
+                        ${futureAmountHtml}
+                    </td>
+                    <td class="amount" style="vertical-align: top;">
                         ${plannedAmountHtml}
                         ${paidAmountHtml}
                     </td>

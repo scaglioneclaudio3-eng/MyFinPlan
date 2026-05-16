@@ -141,8 +141,8 @@ const Categories = {
         const expenses = DataStore.currentMonth?.expenses.filter(e => e.categoryId === category.id) || [];
 
         // Split expenses into current and future (reminders)
-        const currentExpenses = expenses.filter(e => e.plannedDate !== 0);
-        const futureExpenses = expenses.filter(e => e.plannedDate === 0);
+        const currentExpenses = expenses.filter(e => !e.isFutureReminder && e.plannedDate !== 0);
+        const futureExpenses = expenses.filter(e => e.isFutureReminder || e.plannedDate === 0);
 
         const year = DataStore.currentMonth?.year || new Date().getFullYear();
         const month = DataStore.currentMonth?.month || (new Date().getMonth() + 1);
@@ -354,7 +354,7 @@ const Categories = {
 
             let futureAmountHtml = '';
             if (isFutureReminder) {
-                futureAmountHtml = `<div style="color: #87ceeb; display: flex; justify-content: flex-end; width: 100%; font-family: 'Consolas', monospace;"><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
+                futureAmountHtml = `<div style="color: #87ceeb; display: flex; justify-content: flex-end; width: 100%;"><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
             }
 
             let plannedAmountHtml = '';
@@ -378,7 +378,7 @@ const Categories = {
             html += `
                 <tr data-expense-id="${expense.id}" data-category-id="${category.id}">
                     <td>${descriptionDisplay}</td>
-                    <td class="future-amount" style="vertical-align: top;">
+                    <td class="future-amount amount" style="vertical-align: top; color: #87ceeb !important;">
                         ${futureAmountHtml}
                     </td>
                     <td class="amount" style="vertical-align: top;">

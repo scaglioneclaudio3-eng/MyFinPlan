@@ -219,7 +219,12 @@ const Categories = {
         // HTML for Future Total Column (only if > 0 items)
         // Using a distinct class for styling
         const futureTotalHtml = futureTotal > 0
-            ? `<span class="category-future-total" style="color: #87ceeb; font-size: 0.9em; font-weight: bold; display: flex; align-items: center; justify-content: flex-end; padding-right: 15px;">${formatCurrency(futureTotal)}</span>`
+            ? `<span class="category-future-total" style="color: #87ceeb; font-size: 0.9em; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; padding-right: 15px;">
+                 <div style="display: flex; justify-content: flex-end; width: 100%;">
+                     <span style="margin-right: 8px; font-weight: normal;">futuro:</span>
+                     <span style="display: inline-block; width: 85px; text-align: right; font-weight: bold;">${formatCurrency(futureTotal)}</span>
+                 </div>
+               </span>`
             : '<span class="category-future-total"></span>'; // Placeholder to keep alignment if needed, or empty
 
         card.innerHTML = `
@@ -349,7 +354,7 @@ const Categories = {
 
             let futureAmountHtml = '';
             if (isFutureReminder) {
-                futureAmountHtml = `<div style="color: #87ceeb; display: flex; justify-content: flex-end; width: 100%;"><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
+                futureAmountHtml = `<div style="color: #87ceeb; display: flex; justify-content: flex-end; width: 100%; font-family: 'Consolas', monospace;"><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
             }
 
             let plannedAmountHtml = '';

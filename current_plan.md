@@ -1,11 +1,10 @@
-# Current Plan - Renomear Categoria Não Planejada
+# Current Plan - Formatação Lembrete Despesas Futuras
 
 - status: done
-- goal: Altere a descrição da categoria "Despesas não planejadas" para "Categorias não planejadas". Tornar a cor fixa em violeta (#8a2be2) e inalterável, assim como o nome e proibir sua exclusão.
+- goal: Ajustar o painel de despesas planejadas para alterar a exibição de "Lembrete despesas meses futuros:" para "Futuro:" e exibir o valor nesta mesma linha de texto, retirando-o da coluna de valores. Além disso, reforçar a validação da data destas despesas para exigir o mês com três letras e, opcionalmente, "dia, mês".
 
 ## Steps
-1. [x] Modificar o nome padrão no array de inicialização e no script de migração do `dataStore.js` para "Categorias Não Planejadas" e cor "#8a2be2".
-2. [x] Atualizar as checagens e lógicas espalhadas no `categories.js` de 'despesas não planejadas' para 'categorias não planejadas'.
-3. [x] Atualizar as lógicas no `modals.js` para a mesma string, e travar edição de nome e cor desta categoria no popup correspondente.
-4. [x] Atualizar referências da documentação em `app.js`.
-5. [x] Realizar teste de lint e checar a compilação do JS alterado.
+1. [x] Modificar em `categories.js` a exibição da label de despesas futuras para "Futuro:" e incluir o `plannedAmountObjStr` direto nesta string.
+2. [x] Remover as variáveis de renderização de valor planejado e pago nas colunas do quadro para `isFutureReminder`, de modo que a coluna de valores fique vazia nestes itens.
+3. [x] Modificar em `modals.js` a validação e processamento do submit de formulário (`saveExpenseFromForm`) de despesas para impor uso do formato "(dia), (mês)" onde o mês tem 3 letras.
+4. [x] Atualizar o placeholder de ajuda no campo de data da modal para exibir as novas instruções de formatação.

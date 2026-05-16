@@ -221,8 +221,8 @@ const Modals = {
         
         isFutureCb.onchange = (e) => {
             if (e.target.checked) {
-                plannedDateInput.placeholder = "Mês ou Dia (Ex: Jan, Fev, 15/Mar)";
-                plannedDateInput.title = "Nome do Mês ou Data Prevista";
+                plannedDateInput.placeholder = "mês (ex: jan) ou dia, mês (ex: 15, jan)";
+                plannedDateInput.title = "Obrigatório: Nome do Mês (3 letras). Opcional: Dia (ex: 15, jan)";
                 paidRow.style.display = 'none';
                 specialTypeInput.closest('.form-row').style.display = 'none';
                 isTemplateCb.checked = true; // Future reminders must copy over
@@ -1462,7 +1462,19 @@ const Modals = {
 
         let plannedDate = 0;
         if (isFutureReminder) {
-            plannedDate = plannedDateInput;
+            const regex = /^(?:(\d{1,2})\s*[,/ -]*\s*)?(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)$/i;
+            const match = plannedDateInput.trim().match(regex);
+            if (!match) {
+                if (typeof showToast === 'function') {
+                    showToast('Data inválida. Use "mês" (ex: jan) ou "dia, mês" (ex: 15, jan). O mês deve ter 3 letras.', 'error');
+                } else if (window.api && window.api.showMessage) {
+                    window.api.showMessage('Data inválida. Use "mês" (ex: jan) ou "dia, mês" (ex: 15, jan). O mês deve ter 3 letras.', 'error');
+                }
+                return;
+            }
+            const dayPart = match[1];
+            const monthPart = match[2].toLowerCase();
+            plannedDate = dayPart ? `${dayPart}, ${monthPart}` : monthPart;
         } else if (plannedDateInput.toLowerCase() === 'all' || plannedDateInput.toLowerCase() === 'fds') {
             plannedDate = plannedDateInput.toLowerCase();
         } else {

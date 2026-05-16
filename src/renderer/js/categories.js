@@ -327,8 +327,9 @@ const Categories = {
 
             // Prefix description for future expenses
             const isFutureReminder = expense.isFutureReminder || expense.plannedDate === 0;
+            const plannedAmountObjStr = (expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-';
             const descriptionDisplay = isFutureReminder
-                ? `<span class="text-muted">Lembrete Despesas Meses Futuros:</span> ${expense.description}`
+                ? `<span class="text-muted">Futuro: ${plannedAmountObjStr} -</span> ${expense.description}`
                 : expense.description;
 
             let paidTotalExp = 0;
@@ -347,24 +348,14 @@ const Categories = {
                 }
             }
 
-            const plannedAmountObjStr = (expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-';
-            
             let plannedAmountHtml = '';
-            if (!isUnplannedCat) {
-                if (isFutureReminder) {
-                    plannedAmountHtml = `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
-                } else {
-                    plannedAmountHtml = `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
-                }
+            if (!isUnplannedCat && !isFutureReminder) {
+                plannedAmountHtml = `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
             }
                 
             let paidAmountHtml = '';
-            if (paidTotalExp > 0) {
-                if (isFutureReminder) {
-                    paidAmountHtml = `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><strong style="display: inline-block; width: 85px; text-align: right;">${formatCurrency(paidTotalExp)}</strong></div>`;
-                } else {
-                    paidAmountHtml = `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">pago:</span><strong style="display: inline-block; width: 85px; text-align: right;">${formatCurrency(paidTotalExp)}</strong></div>`;
-                }
+            if (paidTotalExp > 0 && !isFutureReminder) {
+                paidAmountHtml = `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">pago:</span><strong style="display: inline-block; width: 85px; text-align: right;">${formatCurrency(paidTotalExp)}</strong></div>`;
             }
             
             let dateDisplay = expense.plannedDate;

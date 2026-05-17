@@ -104,7 +104,7 @@ const Modals = {
             colorInput.value = category.color;
             form.dataset.categoryId = category.id;
             
-            if (category.name.toLowerCase() === 'categorias não planejadas') {
+            if (category.name.toLowerCase() === 'despesas não categorizadas') {
                 nameInput.readOnly = true;
                 colorInput.disabled = true;
                 colorInput.style.pointerEvents = 'none';
@@ -156,7 +156,7 @@ const Modals = {
         if (expense) {
             // Strictly block unplanned expense editing via main modal
             const checkCat = DataStore.categories.find(c => c.id === expense.categoryId);
-            if (checkCat && checkCat.name.toLowerCase() === 'categorias não planejadas') {
+            if (checkCat && checkCat.name.toLowerCase() === 'despesas não categorizadas') {
                 if (typeof showToast === 'function') showToast('Despesas dessa categoria só podem ser editadas pelo popup diário.', 'warning');
                 return;
             }
@@ -204,7 +204,7 @@ const Modals = {
         let isUnplanned = false;
         if (activeCatId) {
             const cat = DataStore.categories.find(c => c.id === activeCatId);
-            if (cat && cat.name.toLowerCase() === 'categorias não planejadas') {
+            if (cat && cat.name.toLowerCase() === 'despesas não categorizadas') {
                 isUnplanned = true;
             }
         }
@@ -652,7 +652,7 @@ const Modals = {
                 catPlanned.forEach(plannedExp => {
                     const savedActual = catActuals.find(a => a.expenseId === plannedExp.id);
                     const actualValue = savedActual ? savedActual.amount : '';
-                    const isUnplannedCat = cat.name.toLowerCase() === 'categorias não planejadas';
+                    const isUnplannedCat = cat.name.toLowerCase() === 'despesas não categorizadas';
                     const descHtml = isUnplannedCat 
                         ? `<input type="text" class="editable-input unplanned-desc-input form-control" value="${plannedExp.description}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>` 
                         : `${plannedExp.description}`;
@@ -724,7 +724,7 @@ const Modals = {
                 globalAddExtraBtn.type = 'button';
                 globalAddExtraBtn.className = 'btn btn-outline btn-sm global-add-unplanned-btn';
                 globalAddExtraBtn.style = 'margin-top: 15px; width: 100%; padding: 10px; font-weight: bold; border-style: dashed; border-radius: 8px;';
-                globalAddExtraBtn.innerHTML = '+ Adicionar Nova Despesa Não Planejada';
+                globalAddExtraBtn.innerHTML = '+ Adicionar Nova Despesa Não Categorizada';
                 container.appendChild(globalAddExtraBtn);
 
                 const unplannedContainer = document.createElement('div');
@@ -737,7 +737,7 @@ const Modals = {
                     extraDiv.className = 'expense-detail-row global-extra-expense';
                     extraDiv.style = 'display: flex; margin-bottom: 8px; align-items: center; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px;';
                     extraDiv.innerHTML = `
-                        <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Não Planejada)" style="flex: 1; margin-right: 10px; padding: 6px;">
+                        <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Não Categorizada)" style="flex: 1; margin-right: 10px; padding: 6px;">
                         <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="Valor Pago" style="width: 130px; margin-right: 10px; padding: 6px;">
                         <button type="button" class="btn-remove-global-extra" title="Remover" style="background: none; border: none; font-size: 1.5em; color: var(--danger-color); cursor: pointer;">&times;</button>
                     `;
@@ -904,7 +904,7 @@ const Modals = {
             // Check for worker expense non-standard dates
             const categoryId = document.getElementById('expense-category-id').value;
             const cat = DataStore.categories.find(c => c.id === categoryId);
-            const isUnplanned = cat && cat.name.toLowerCase() === 'categorias não planejadas';
+            const isUnplanned = cat && cat.name.toLowerCase() === 'despesas não categorizadas';
             
             const isWorkerExpense = ['SALARY_ADVANCE', 'INSS', 'FGTS', 'FIFTH_WORKING_DAY', 'VALE_TRANSPORTE', 'VALE_ALIMENTACAO', 'CESTA_BASICA'].includes(specialType);
             const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
@@ -1172,16 +1172,24 @@ const Modals = {
                 let totalDaySum = 0;
                 const incomesToDelete = [];
 
-                modal.querySelectorAll('.planned-income').forEach(row => {
+                const plannedIncomes = Array.from(modal.querySelectorAll('.planned-income'));
+                for (const row of plannedIncomes) {
                     const incId = row.dataset.incomeId;
-                    const amount = parseFloat(row.querySelector('.actual-amount-input').value);
+                    const amountStr = row.querySelector('.actual-amount-input').value.trim();
+                    const amount = parseFloat(amountStr);
                     
                     const inc = DataStore.currentMonth.incomes.find(i => i.id === incId);
                     const isUnplanned = inc && inc.isUnplanned;
                     const descInput = row.querySelector('.unplanned-desc-input');
                     
+                    let newDesc = '';
                     if (isUnplanned && descInput) {
-                        const newDesc = descInput.value.trim();
+                        newDesc = descInput.value.trim();
+                        const hasAmount = amountStr !== '' && !isNaN(amount) && amount > 0;
+                        const hasDesc = newDesc !== '';
+                        if ((hasAmount && !hasDesc) || (!hasAmount && hasDesc)) {
+                            throw new Error("Não é permitida a inserção parcial de dados. Preencha tanto a descrição quanto o valor nas receitas diárias.");
+                        }
                         if (newDesc && inc) inc.description = newDesc;
                     }
                     
@@ -1196,27 +1204,44 @@ const Modals = {
                             incomesToDelete.push(incId);
                         }
                     }
-                });
+                }
 
-                modal.querySelectorAll('.extra-income').forEach(row => {
+                const extraIncomes = Array.from(modal.querySelectorAll('.extra-income'));
+                for (const row of extraIncomes) {
                     const desc = row.querySelector('.extra-desc-input').value.trim();
-                    const amount = parseFloat(row.querySelector('.actual-amount-input').value);
-                    if (!isNaN(amount) && amount > 0) {
-                        entriesToSave.push({ description: desc || 'Receita Extra', amount: amount, isExtra: true });
+                    const amountStr = row.querySelector('.actual-amount-input').value.trim();
+                    const amount = parseFloat(amountStr);
+                    
+                    const hasAmount = amountStr !== '' && !isNaN(amount) && amount > 0;
+                    const hasDesc = desc !== '';
+                    
+                    if ((hasAmount && !hasDesc) || (!hasAmount && hasDesc)) {
+                        throw new Error("Não é permitida a inserção parcial de dados. Preencha tanto a descrição quanto o valor nas receitas diárias.");
+                    }
+
+                    if (hasAmount && hasDesc) {
+                        entriesToSave.push({ description: desc, amount: amount, isExtra: true });
                         totalDaySum += amount;
                     }
-                });
+                }
 
                 const globalExtras = document.querySelectorAll('#unplanned-new-incomes-container .global-extra-income');
                 if (globalExtras.length > 0) {
                     for (const row of globalExtras) {
                         const desc = row.querySelector('.extra-desc-input').value.trim();
-                        const amount = parseFloat(row.querySelector('.actual-amount-input').value);
-                        if (!isNaN(amount) && amount > 0) {
-                            const descFinal = desc || 'Receita Não Prevista';
+                        const amountStr = row.querySelector('.actual-amount-input').value.trim();
+                        const amount = parseFloat(amountStr);
+                        
+                        const hasAmount = amountStr !== '' && !isNaN(amount) && amount > 0;
+                        const hasDesc = desc !== '';
+                        
+                        if ((hasAmount && !hasDesc) || (!hasAmount && hasDesc)) {
+                            throw new Error("Não é permitida a inserção parcial de dados. Preencha tanto a descrição quanto o valor nas receitas diárias.");
+                        }
 
+                        if (hasAmount && hasDesc) {
                             const newInc = await DataStore.addIncome({
-                                description: descFinal,
+                                description: desc,
                                 plannedAmount: amount,
                                 plannedDate: day,
                                 receivedAmount: null,
@@ -1289,22 +1314,30 @@ const Modals = {
                     const catId = catDiv.querySelector('.planned-items-container').dataset.catId;
                     const catItems = [];
 
-                    catDiv.querySelectorAll('.planned-expense').forEach(row => {
+                    const plannedRows = Array.from(catDiv.querySelectorAll('.planned-expense'));
+                    for (const row of plannedRows) {
                         const expId = row.dataset.expenseId;
-                        const amount = parseFloat(row.querySelector('.actual-amount-input').value);
+                        const amountStr = row.querySelector('.actual-amount-input').value.trim();
+                        const amount = parseFloat(amountStr);
                         
                         const exp = DataStore.currentMonth.expenses.find(e => e.id === expId);
                         let isUnplanned = false;
                         if (exp) {
                             const cat = DataStore.categories.find(c => c.id === exp.categoryId);
-                            if (cat && cat.name.toLowerCase() === 'categorias não planejadas') {
+                            if (cat && cat.name.toLowerCase() === 'despesas não categorizadas') {
                                 isUnplanned = true;
                             }
                         }
 
                         const descInput = row.querySelector('.unplanned-desc-input');
-                        if (isUnplanned && exp && descInput) {
-                            const newDesc = descInput.value.trim();
+                        let newDesc = '';
+                        if (isUnplanned && descInput) {
+                            newDesc = descInput.value.trim();
+                            const hasAmount = amountStr !== '' && !isNaN(amount) && amount > 0;
+                            const hasDesc = newDesc !== '';
+                            if ((hasAmount && !hasDesc) || (!hasAmount && hasDesc)) {
+                                throw new Error("Não é permitida a inserção parcial de dados. Preencha tanto a descrição quanto o valor nas despesas diárias.");
+                            }
                             if (newDesc) exp.description = newDesc;
                         }
 
@@ -1319,17 +1352,25 @@ const Modals = {
                                 expensesToDelete.push(expId);
                             }
                         }
-                    });
+                    }
 
                     const extraExps = Array.from(catDiv.querySelectorAll('.extra-expense'));
                     for (const row of extraExps) {
                         const desc = row.querySelector('.extra-desc-input').value.trim();
-                        const amount = parseFloat(row.querySelector('.actual-amount-input').value);
-                        if (!isNaN(amount) && amount > 0) {
-                            const descFinal = desc || 'Despesa Efetiva';
+                        const amountStr = row.querySelector('.actual-amount-input').value.trim();
+                        const amount = parseFloat(amountStr);
+                        
+                        const hasAmount = amountStr !== '' && !isNaN(amount) && amount > 0;
+                        const hasDesc = desc !== '';
+                        
+                        if ((hasAmount && !hasDesc) || (!hasAmount && hasDesc)) {
+                            throw new Error("Não é permitida a inserção parcial de dados. Preencha tanto a descrição quanto o valor nas despesas diárias.");
+                        }
+
+                        if (hasAmount && hasDesc) {
                             const newExp = await DataStore.addExpense({
                                 categoryId: catId,
-                                description: descFinal,
+                                description: desc,
                                 plannedAmount: 0,
                                 plannedDate: day,
                                 paidAmount: amount,
@@ -1348,20 +1389,27 @@ const Modals = {
 
                 const globalExtras = document.querySelectorAll('#unplanned-new-entries-container .global-extra-expense');
                 if (globalExtras.length > 0) {
-                    let unplannedCat = DataStore.categories.find(c => c.name.toLowerCase() === 'categorias não planejadas');
+                    let unplannedCat = DataStore.categories.find(c => c.name.toLowerCase() === 'despesas não categorizadas');
                     if (!unplannedCat) {
-                        unplannedCat = await DataStore.addCategory({ name: 'Categorias Não Planejadas', color: '#8a2be2' });
+                        unplannedCat = await DataStore.addCategory({ name: 'Despesas Não Categorizadas', color: '#8a2be2' });
                     }
 
                     for (const row of globalExtras) {
                         const desc = row.querySelector('.extra-desc-input').value.trim();
-                        const amount = parseFloat(row.querySelector('.actual-amount-input').value);
-                        if (!isNaN(amount) && amount > 0) {
-                            const descFinal = desc || 'Despesa Não Planejada';
+                        const amountStr = row.querySelector('.actual-amount-input').value.trim();
+                        const amount = parseFloat(amountStr);
+                        
+                        const hasAmount = amountStr !== '' && !isNaN(amount) && amount > 0;
+                        const hasDesc = desc !== '';
+                        
+                        if ((hasAmount && !hasDesc) || (!hasAmount && hasDesc)) {
+                            throw new Error("Não é permitida a inserção parcial de dados. Preencha tanto a descrição quanto o valor nas despesas diárias.");
+                        }
 
+                        if (hasAmount && hasDesc) {
                             const newExp = await DataStore.addExpense({
                                 categoryId: unplannedCat.id,
-                                description: descFinal,
+                                description: desc,
                                 plannedAmount: 0,
                                 plannedDate: day,
                                 paidAmount: amount,
@@ -1506,7 +1554,7 @@ const Modals = {
 
         const categoryId = document.getElementById('expense-category-id').value;
         const cat = DataStore.categories.find(c => c.id === categoryId);
-        const isUnplanned = cat && cat.name.toLowerCase() === 'categorias não planejadas';
+        const isUnplanned = cat && cat.name.toLowerCase() === 'despesas não categorizadas';
 
         const expense = {
             categoryId: categoryId,

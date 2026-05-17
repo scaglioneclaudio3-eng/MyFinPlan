@@ -210,7 +210,7 @@ const Categories = {
             }
         }
         
-        const isUnplannedCat = category.name.toLowerCase() === 'categorias não planejadas';
+        const isUnplannedCat = category.name.toLowerCase() === 'despesas não categorizadas';
 
         const card = document.createElement('div');
         card.className = 'category-card';
@@ -287,8 +287,8 @@ const Categories = {
      * @param {Object} category - The category
      */
     createExpenseTable(expenses, category) {
-        const isUnplannedCat = category.name.toLowerCase() === 'categorias não planejadas';
-        const addBtnHtml = `<button class="add-expense-btn" data-category-id="${category.id}">+ Adicionar Despesa</button>`;
+        const isUnplannedCat = category.name.toLowerCase() === 'despesas não categorizadas';
+        const addBtnHtml = isUnplannedCat ? '' : `<button class="add-expense-btn" data-category-id="${category.id}">+ Adicionar Despesa</button>`;
 
         if (expenses.length === 0) {
             return `
@@ -407,11 +407,11 @@ const Categories = {
      * @param {Object} category - The category to delete
      */
     async confirmDelete(category) {
-        if (category.name.toLowerCase() === 'categorias não planejadas') {
+        if (category.name.toLowerCase() === 'despesas não categorizadas') {
             if (typeof showToast === 'function') {
-                showToast('A categoria "Categorias Não Planejadas" não pode ser excluída.', 'error');
+                showToast('A categoria "Despesas Não Categorizadas" não pode ser excluída.', 'error');
             } else if (window.api && window.api.showMessage) {
-                window.api.showMessage('A categoria "Categorias Não Planejadas" não pode ser excluída.', 'error');
+                window.api.showMessage('A categoria "Despesas Não Categorizadas" não pode ser excluída.', 'error');
             }
             return;
         }
@@ -502,7 +502,7 @@ const Categories = {
                 const categoryId = row.dataset.categoryId;
                 const expense = DataStore.currentMonth?.expenses.find(ex => ex.id === expenseId);
                 const category = DataStore.categories.find(c => c.id === categoryId);
-                const isUnplannedCat = category && category.name.toLowerCase() === 'categorias não planejadas';
+                const isUnplannedCat = category && category.name.toLowerCase() === 'despesas não categorizadas';
                 
                 if (expense) {
                     if (isUnplannedCat) {

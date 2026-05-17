@@ -102,20 +102,40 @@ const DataStore = {
 
         let hasChanges = false;
         
-        const oldCat = this.categories.find(c => c.name.toLowerCase() === 'não planejadas' || c.name.toLowerCase() === 'despesas não planejadas');
-        if (oldCat) {
-            if (oldCat.name !== 'Categorias Não Planejadas') {
-                oldCat.name = 'Categorias Não Planejadas';
-                hasChanges = true;
-            }
-            if (oldCat.color !== '#8a2be2') {
-                oldCat.color = '#8a2be2';
-                hasChanges = true;
-            }
-        }
+        const unplannedCats = this.categories.filter(c => 
+            c.name.toLowerCase().includes('não planejad') || 
+            c.name.toLowerCase().includes('nao planejad') ||
+            c.name.toLowerCase().includes('não categorizad') ||
+            c.name.toLowerCase().includes('nao categorizad')
+        );
 
-        if (!this.categories.some(c => c.name.toLowerCase() === 'categorias não planejadas')) {
-            this.categories.push({ id: 'unplanned-cat-id', name: 'Categorias Não Planejadas', color: '#8a2be2', order: 999 });
+        if (unplannedCats.length > 0) {
+            const primaryCat = unplannedCats[0];
+            
+            if (primaryCat.name !== 'Despesas Não Categorizadas') {
+                primaryCat.name = 'Despesas Não Categorizadas';
+                hasChanges = true;
+            }
+            if (primaryCat.color !== '#8a2be2') {
+                primaryCat.color = '#8a2be2';
+                hasChanges = true;
+            }
+            if (primaryCat.hiddenFrom) {
+                delete primaryCat.hiddenFrom;
+                hasChanges = true;
+            }
+
+            this.primaryUnplannedId = primaryCat.id;
+
+            if (unplannedCats.length > 1) {
+                const idsToRemove = unplannedCats.slice(1).map(c => c.id);
+                this.categories = this.categories.filter(c => !idsToRemove.includes(c.id));
+                await this.migrateObsoleteCategories(primaryCat.id, idsToRemove);
+                hasChanges = true;
+            }
+        } else {
+            const newCat = { id: 'unplanned-cat-id', name: 'Despesas Não Categorizadas', color: '#8a2be2', order: 999 };
+            this.categories.push(newCat);
             hasChanges = true;
         }
         
@@ -124,6 +144,54 @@ const DataStore = {
         }
 
         return this.categories;
+    },
+
+    /**
+     * Migrates expenses from obsolete category IDs to a primary ID across all month files
+     */
+    async migrateObsoleteCategories(primaryId, obsoleteIds) {
+        if (!obsoleteIds || obsoleteIds.length === 0) return;
+        
+        try {
+            const months = await window.api.listMonthFiles();
+            for (const monthId of months) {
+                const data = await window.api.readFile(`months/${monthId}.json`);
+                if (!data) continue;
+                
+                let monthChanged = false;
+
+                if (data.expenses) {
+                    for (let e of data.expenses) {
+                        if (obsoleteIds.includes(e.categoryId)) {
+                            e.categoryId = primaryId;
+                            monthChanged = true;
+                        }
+                    }
+                }
+
+                if (data.dailyActualExpenseDetails) {
+                    for (const day in data.dailyActualExpenseDetails) {
+                        const dayDetails = data.dailyActualExpenseDetails[day];
+                        for (const catId in dayDetails) {
+                            if (obsoleteIds.includes(catId)) {
+                                if (!dayDetails[primaryId]) {
+                                    dayDetails[primaryId] = [];
+                                }
+                                dayDetails[primaryId].push(...dayDetails[catId]);
+                                delete dayDetails[catId];
+                                monthChanged = true;
+                            }
+                        }
+                    }
+                }
+                
+                if (monthChanged) {
+                    await window.api.writeFile(`months/${monthId}.json`, data);
+                }
+            }
+        } catch (error) {
+            console.error('Error during category migration:', error);
+        }
     },
 
     /**

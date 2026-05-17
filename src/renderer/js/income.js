@@ -153,7 +153,7 @@ const Income = {
         }
 
         const isUnplannedText = income.isUnplanned
-            ? '<br><span style="font-size: 11px; color: #ff6b6b;">(não planejada)</span>' 
+            ? '<br><span style="font-size: 11px; color: #ff6b6b;">(não prevista)</span>' 
             : '';
 
         const plannedHtml = !income.isUnplanned 
@@ -284,11 +284,11 @@ const Income = {
         const errors = [];
 
         if (!income.description || income.description.trim() === '') {
-            errors.push('Descrição é obrigatória');
+            errors.push('A descrição é obrigatória');
         }
 
-        if (income.plannedAmount === null || income.plannedAmount === undefined || income.plannedAmount < 0) {
-            errors.push('Valor previsto deve ser um número positivo');
+        if (!income.isUnplanned && (income.plannedAmount === null || income.plannedAmount === undefined || income.plannedAmount <= 0)) {
+            errors.push('O valor previsto é obrigatório e deve ser maior que zero');
         }
 
         // Validate plannedDate

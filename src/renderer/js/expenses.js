@@ -66,11 +66,14 @@ const Expenses = {
 
         // Required fields
         if (!expense.description || expense.description.trim() === '') {
-            errors.push('Descrição é obrigatória');
+            errors.push('A descrição é obrigatória');
         }
 
-        if (expense.plannedAmount === null || expense.plannedAmount === undefined || expense.plannedAmount < 0) {
-            errors.push('Valor previsto deve ser um número positivo');
+        const cat = DataStore.categories.find(c => c.id === expense.categoryId);
+        const isUnplanned = cat && cat.name.toLowerCase() === 'despesas não categorizadas';
+
+        if (!isUnplanned && (expense.plannedAmount === null || expense.plannedAmount === undefined || expense.plannedAmount <= 0)) {
+            errors.push('O valor previsto é obrigatório e deve ser maior que zero');
         }
 
         if (expense.plannedDate === null || expense.plannedDate === undefined) {

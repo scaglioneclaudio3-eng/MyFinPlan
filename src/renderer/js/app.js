@@ -411,7 +411,7 @@ const App = {
                     </ul>
                 </div>
                 <div class="tutorial-step">
-                    <h4>3. Pagamentos e Categorias Não Planejadas</h4>
+                    <h4>3. Pagamentos e Despesas Não Categorizadas</h4>
                     <p>Clique em uma despesa para informar o valor pago e a data. Valores de 'planejado' e 'pago' são exibidos com clareza. Para adicionar despesas extras, clique num dia no painel "Despesas Efetivas Diárias" para abrir o popup de detalhes expandido.</p>
                 </div>
                 <div class="tutorial-step">

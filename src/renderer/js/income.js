@@ -12,11 +12,18 @@ const Income = {
         const container = document.getElementById('income-container');
         container.innerHTML = '';
 
-        const incomes = DataStore.currentMonth?.incomes || [];
+        let incomes = DataStore.currentMonth?.incomes || [];
 
         if (incomes.length === 0) {
             container.innerHTML = '<p class="text-center text-muted">Nenhuma receita cadastrada</p>';
         } else {
+            // Sort incomes by date ascending (all = 0, so it appears first)
+            incomes = [...incomes].sort((a, b) => {
+                const dateA = (a.plannedDate === 'all' || !a.plannedDate) ? 0 : parseInt(a.plannedDate, 10);
+                const dateB = (b.plannedDate === 'all' || !b.plannedDate) ? 0 : parseInt(b.plannedDate, 10);
+                return dateA - dateB;
+            });
+
             for (const income of incomes) {
                 const card = this.createIncomeCard(income);
                 container.appendChild(card);
@@ -143,27 +150,73 @@ const Income = {
         const dateLabel = income.plannedDate === 'all' || !income.plannedDate ? 'all' : `Dia ${income.plannedDate}`;
 
         let totalReceived = 0;
+        let receivedDates = [];
         const details = DataStore.currentMonth?.dailyActualIncomeDetails || {};
         for (const [dayKey, itemsArray] of Object.entries(details)) {
             for (const item of itemsArray) {
                 if (item.incomeId === income.id) {
                     totalReceived += (item.amount || 0);
+                    if (!receivedDates.includes(dayKey)) {
+                        receivedDates.push(dayKey);
+                    }
                 }
             }
         }
+        
+        receivedDates.sort((a, b) => parseInt(a) - parseInt(b));
+        const receivedDatesStr = receivedDates.length > 0 ? `Dia ${receivedDates.join(', ')}` : '-';
 
         const isUnplannedText = income.isUnplanned
             ? '<br><span style="font-size: 11px; color: #ff6b6b;">(não prevista)</span>' 
             : '';
 
-        const plannedHtml = !income.isUnplanned 
-            ? `<div class="income-planned"><span style="font-size: 11px; margin-right: 4px; opacity: 0.9;">Esperada:</span>${formatCurrency(income.plannedAmount)}</div>` 
-            : '';
+        let isPastDue = false;
+        const todayDate = new Date();
+        todayDate.setHours(0,0,0,0);
+        
+        const year = DataStore.currentMonth?.year || todayDate.getFullYear();
+        const month = DataStore.currentMonth?.month || (todayDate.getMonth() + 1);
+
+        let effectiveDay = income.plannedDate;
+        if (effectiveDay === -1) {
+            effectiveDay = getNextWorkingDay(year, month, 1, DataStore.holidays || []);
+        } else if (effectiveDay > 0) {
+            effectiveDay = getEffectiveDate(year, month, income, DataStore.holidays || []);
+        }
+
+        if (typeof effectiveDay === 'number' && effectiveDay > 0) {
+            const plannedDateObj = new Date(year, month - 1, effectiveDay);
+            if (plannedDateObj < todayDate) isPastDue = true;
+        } else if (income.plannedDate === -1) {
+            isPastDue = true;
+        } else if (year < todayDate.getFullYear() || (year === todayDate.getFullYear() && month < todayDate.getMonth() + 1)) {
+            isPastDue = true;
+        }
+
+        const isFuture = income.isFutureReminder || income.plannedDate === 0;
+        const needsBlink = isPastDue && (totalReceived < income.plannedAmount) && !income.isUnplanned && !isFuture;
+
+        const plannedDateHtml = (!income.isUnplanned && !isFuture) ? `<div style="font-weight: bold; color: #ADD8E6; margin-bottom: 2px;">[${dateLabel}]</div>` : `<div style="height: 16.5px; margin-bottom: 2px;"></div>`;
+        const receivedDateHtml = totalReceived > 0 ? `<div style="color: var(--success-color);">[${receivedDatesStr}]</div>` : '';
+
+        const plannedHtml = (!income.isUnplanned && !isFuture)
+            ? `<div class="income-planned" style="margin-bottom: 2px;"><span style="font-size: 11px; margin-right: 4px; opacity: 0.9;">Planejada:</span>${formatCurrency(income.plannedAmount)}</div>` 
+            : `<div style="height: 16.5px; margin-bottom: 2px;"></div>`;
+
+        const futureHtml = isFuture
+            ? `<div class="income-future" style="color: #87ceeb; text-align: right; font-family: 'Consolas', monospace; padding-right: 10px; font-weight: bold;">
+                 ${formatCurrency(income.plannedAmount)}
+               </div>`
+            : `<div></div>`;
 
         card.innerHTML = `
-            <div class="income-description">
-                <span style="font-weight:bold; margin-right:8px; color:#ADD8E6;font-size:11px;">[${dateLabel}]</span>
+            <div class="income-description ${needsBlink ? 'blink-alert' : ''}" title="${income.description}">
                 ${income.description}${isUnplannedText}
+            </div>
+            ${futureHtml}
+            <div class="income-dates">
+                ${plannedDateHtml}
+                ${receivedDateHtml}
             </div>
             <div class="income-amounts">
                 ${plannedHtml}
@@ -216,8 +269,8 @@ const Income = {
         // Initialize distribution with zeros
         for (let d = 1; d <= daysInMonth; d++) distribution[d] = 0;
 
-        // Process Recurring Incomes ("all")
-        const recurringIncomes = incomes.filter(i => !i.plannedDate || i.plannedDate === 'all');
+        // Process 'All Days' Incomes (Distributed)
+        const recurringIncomes = incomes.filter(i => !i.isFutureReminder && (!i.plannedDate || i.plannedDate === 'all'));
         let dailyRecurringBase = recurringIncomes.reduce((sum, i) => sum + (i.plannedAmount || 0), 0);
 
         if (dailyRecurringBase > 0) {
@@ -258,7 +311,7 @@ const Income = {
         }
 
         // Process Dated Incomes (Specific Day)
-        const datedIncomes = incomes.filter(i => i.plannedDate && i.plannedDate !== 'all');
+        const datedIncomes = incomes.filter(i => !i.isFutureReminder && i.plannedDate && i.plannedDate !== 'all');
         for (const income of datedIncomes) {
             const day = Number(income.plannedDate);
             if (day >= 1 && day <= daysInMonth) {
@@ -292,7 +345,7 @@ const Income = {
         }
 
         // Validate plannedDate
-        if (income.plannedDate !== 'all') {
+        if (income.plannedDate !== 'all' && !income.isFutureReminder) {
             const day = Number(income.plannedDate);
             const daysInMonth = DataStore.currentMonth ? getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month) : 31;
 

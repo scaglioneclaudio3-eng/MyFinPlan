@@ -337,6 +337,16 @@ const Modals = {
 
             document.getElementById('income-planned-amount').value = formatForInput(income.plannedAmount);
             document.getElementById('income-planned-date').value = income.plannedDate;
+            
+            const isTemplateCb = document.getElementById('income-is-template');
+            if (isTemplateCb) {
+                isTemplateCb.checked = income.isTemplate || false;
+            }
+
+            const isFutureCb = document.getElementById('income-is-future');
+            if (isFutureCb) {
+                isFutureCb.checked = income.isFutureReminder || income.plannedDate === 0 || false;
+            }
 
             // Calculator para Valor Efetivo Recebido e Dias
             let totalReceived = 0;
@@ -362,6 +372,35 @@ const Modals = {
             document.getElementById('income-planned-date').value = ''; // Default for new income (empty allows editing)
             document.getElementById('income-received-amount').value = '';
             document.getElementById('income-received-date').value = '';
+        }
+
+        const toggleReceivedRow = () => {
+            const isFutureCb = document.getElementById('income-is-future');
+            const receivedRow = document.getElementById('income-received-row');
+            if (isFutureCb && receivedRow) {
+                receivedRow.style.display = isFutureCb.checked ? 'none' : 'flex';
+            }
+        };
+
+        toggleReceivedRow();
+        
+        const isFutureCb = document.getElementById('income-is-future');
+        if (isFutureCb) {
+            isFutureCb.onchange = async (e) => {
+                if (e.target.checked) {
+                    const receivedAmountStr = document.getElementById('income-received-amount').value;
+                    if (receivedAmountStr && receivedAmountStr !== '0,00' && receivedAmountStr !== '0') {
+                        const confirm = await window.api.showConfirm('Esta receita possui valor efetivo lançado neste mês. Ao marcá-la como lembrete futuro, os valores efetivos serão removidos. Deseja continuar?');
+                        if (!confirm) {
+                            e.target.checked = false;
+                        } else {
+                            document.getElementById('income-received-amount').value = '';
+                            document.getElementById('income-received-date').value = '';
+                        }
+                    }
+                }
+                toggleReceivedRow();
+            };
         }
 
         this.open('income-modal');
@@ -444,7 +483,12 @@ const Modals = {
             title.textContent = `Detalhamento da Receita do Dia ${day}/${DataStore.currentMonth.month}`;
         }
 
-        const allMonthIncomes = DataStore.currentMonth.incomes || [];
+        const allMonthIncomes = [...(DataStore.currentMonth.incomes || [])];
+        allMonthIncomes.sort((a, b) => {
+            const dateA = (a.plannedDate === 'all' || !a.plannedDate) ? 0 : parseInt(a.plannedDate, 10);
+            const dateB = (b.plannedDate === 'all' || !b.plannedDate) ? 0 : parseInt(b.plannedDate, 10);
+            return dateA - dateB;
+        });
         
         if (!DataStore.currentMonth.dailyActualIncomeDetails) {
             DataStore.currentMonth.dailyActualIncomeDetails = {};
@@ -462,6 +506,7 @@ const Modals = {
                         <thead>
                             <tr>
                                 <th>Descrição da Receita</th>
+                                <th style="width: 80px; text-align: center;">Data</th>
                                 <th class="amount" style="width: 140px;">Valor Efetivo (R$)</th>
                             </tr>
                         </thead>
@@ -472,13 +517,15 @@ const Modals = {
             const savedActual = existingDetails.find(a => a.incomeId === plannedInc.id);
             const actualValue = savedActual ? savedActual.amount : '';
             const unplanTxt = plannedInc.isUnplanned ? '<br><span style="font-size: 11px; color: #ff6b6b; font-weight: bold;">(não prevista)</span>' : '';
+            const dateStr = plannedInc.isUnplanned ? '-' : (plannedInc.plannedDate === 'all' ? 'Freq.' : plannedInc.plannedDate);
             const descHtml = plannedInc.isUnplanned 
                 ? `<input type="text" class="editable-input unplanned-desc-input form-control" value="${plannedInc.description}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>` 
-                : `${plannedInc.description} <span style="font-size: 10px; color: #aaa;">(${plannedInc.plannedDate === 'all' ? 'Freq.' : `${plannedInc.plannedDate}`})</span>`;
+                : `${plannedInc.description}`;
             
             html += `
                 <tr class="expense-detail-row planned-income" data-income-id="${plannedInc.id}">
                     <td>${descHtml} ${unplanTxt}</td>
+                    <td style="text-align: center; vertical-align: middle; font-size: 14px; font-weight: bold; color: #FFFF00;">${dateStr}</td>
                     <td class="amount">
                         <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${actualValue}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>
                     </td>
@@ -493,6 +540,7 @@ const Modals = {
                     <td>
                         <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Extra)" value="${extra.description}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>
                     </td>
+                    <td style="text-align: center; vertical-align: middle; font-size: 14px; font-weight: bold; color: #FFFF00;">-</td>
                     <td class="amount">
                         <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="0,00" value="${extra.amount}" style="width: 100%; padding: 4px;" ${isReadOnly ? 'disabled' : ''}>
                     </td>
@@ -532,6 +580,7 @@ const Modals = {
                 extraDiv.style = 'display: flex; margin-bottom: 8px; align-items: center; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px;';
                 extraDiv.innerHTML = `
                     <input type="text" class="editable-input extra-desc-input form-control" placeholder="Descrição (Não Prevista)" style="flex: 1; margin-right: 10px; padding: 6px;">
+                    <div style="width: 80px; text-align: center; font-size: 14px; font-weight: bold; color: #FFFF00; margin-right: 10px;">-</div>
                     <input type="number" step="0.01" class="editable-input actual-amount-input form-control" placeholder="Valor Efetivo" style="width: 130px; margin-right: 10px; padding: 6px;">
                     <button type="button" class="btn-remove-global-extra" title="Remover" style="background: none; border: none; font-size: 1.5em; color: var(--danger-color); cursor: pointer;">&times;</button>
                 `;
@@ -973,7 +1022,24 @@ const Modals = {
             const plannedDateInput = document.getElementById('income-planned-date').value.trim().toLowerCase();
             let plannedDate = 'all';
 
-            if (plannedDateInput === 'all') {
+            const isFutureCb = document.getElementById('income-is-future');
+            const isFutureChecked = isFutureCb ? isFutureCb.checked : false;
+
+            if (isFutureChecked) {
+                const regex = /^(?:(\d{1,2})\s*[,/ -]*\s*)?(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)$/i;
+                const match = plannedDateInput.match(regex);
+                if (!match) {
+                    if (typeof showToast === 'function') {
+                        showToast('Data inválida. Use "mês" (ex: jan) ou "dia, mês" (ex: 15, jan). O mês deve ter 3 letras.', 'error');
+                    } else if (window.api && window.api.showMessage) {
+                        window.api.showMessage('Data inválida. Use "mês" (ex: jan) ou "dia, mês" (ex: 15, jan). O mês deve ter 3 letras.', 'error');
+                    }
+                    return;
+                }
+                const dayPart = match[1];
+                const monthPart = match[2].toLowerCase();
+                plannedDate = dayPart ? `${dayPart}, ${monthPart}` : monthPart;
+            } else if (plannedDateInput === 'all') {
                 plannedDate = 'all';
             } else {
                 const day = parseInt(plannedDateInput);
@@ -985,7 +1051,7 @@ const Modals = {
                     // Allow empty during intermediate editing
                     plannedDate = null;
                 } else {
-                    showToast(`Dia previsto inválido. Digite "all" ou um dia entre 1 e ${daysInMonth}.`, 'error');
+                    showToast(`Dia previsto inválido. Digite "all", ou um dia entre 1 e ${daysInMonth}.`, 'error');
                     return;
                 }
             }
@@ -1060,17 +1126,19 @@ const Modals = {
                 }
             }
 
-            const income = {
+            const incomeObj = {
                 description: description,
                 plannedAmount: plannedAmount || 0,
                 plannedDate: plannedDate,
                 isUnplanned: false,
+                isTemplate: document.getElementById('income-is-template') ? document.getElementById('income-is-template').checked : false,
+                isFutureReminder: document.getElementById('income-is-future') ? document.getElementById('income-is-future').checked : false,
                 receivedAmount: false ? receivedAmount : null, // Not used since actuals are kept in daily details now
                 receivedDate: false ? receivedDate : null
             };
 
             // Validate
-            const validation = Income.validate(income);
+            const validation = Income.validate(incomeObj);
             if (!validation.valid) {
                 await window.api.showMessage(validation.errors[0], 'warning');
                 return;
@@ -1079,10 +1147,35 @@ const Modals = {
             const incomeId = document.getElementById('income-id').value;
 
             if (incomeId) {
-                await DataStore.updateIncome(incomeId, income);
+                if (incomeObj.isFutureReminder) {
+                    let details = DataStore.currentMonth.dailyActualIncomeDetails;
+                    let actuals = DataStore.currentMonth.dailyActualIncome;
+                    if (details) {
+                        for (const day in details) {
+                            const items = details[day];
+                            const removedAmount = items.filter(i => i.incomeId === incomeId).reduce((sum, i) => sum + (i.amount || 0), 0);
+                            
+                            if (removedAmount > 0) {
+                                const filtered = items.filter(i => i.incomeId !== incomeId);
+                                if (filtered.length > 0) {
+                                    details[day] = filtered;
+                                } else {
+                                    delete details[day];
+                                }
+                                
+                                if (actuals && actuals[day]) {
+                                    actuals[day] -= removedAmount;
+                                    if (actuals[day] <= 0) delete actuals[day];
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                await DataStore.updateIncome(incomeId, incomeObj);
                 showToast('Receita atualizada', 'success');
             } else {
-                await DataStore.addIncome(income);
+                await DataStore.addIncome(incomeObj);
                 showToast('Receita adicionada', 'success');
             }
 
@@ -1172,6 +1265,39 @@ const Modals = {
                 let totalDaySum = 0;
                 const incomesToDelete = [];
 
+                // Collect existing descriptions to check for duplicates
+                const existingIncDescs = new Set();
+                const plannedIncomesForCheck = Array.from(modal.querySelectorAll('.planned-income'));
+                for (const row of plannedIncomesForCheck) {
+                    const incId = row.dataset.incomeId;
+                    const inc = DataStore.currentMonth.incomes.find(i => i.id === incId);
+                    if (inc && inc.description) {
+                        existingIncDescs.add(inc.description.trim().toLowerCase());
+                    }
+                }
+
+                // Pre-validation for all new entries to prevent partial state saving and duplicates
+                const allNewIncomes = Array.from(modal.querySelectorAll('.extra-income, .global-extra-income'));
+                for (const row of allNewIncomes) {
+                    const descInput = row.querySelector('.extra-desc-input');
+                    const desc = descInput ? descInput.value.trim() : '';
+                    const amountStr = row.querySelector('.actual-amount-input').value.trim();
+                    const amount = parseFloat(amountStr);
+                    const hasAmount = amountStr !== '' && !isNaN(amount) && amount > 0;
+                    const hasDesc = desc !== '';
+                    
+                    if (!hasAmount && !hasDesc) continue; // Empty row, skip
+                    
+                    if (!hasAmount && hasDesc) throw new Error(`A receita '${desc}' não possui valor. Insira o valor ou apague a descrição para continuar.`);
+                    if (hasAmount && !hasDesc) throw new Error("Preencha a descrição para a nova receita.");
+
+                    const descLower = desc.toLowerCase();
+                    if (existingIncDescs.has(descLower)) {
+                        throw new Error(`A receita '${desc}' já existe. Por favor, adicione o valor na linha já existente correspondente em vez de criar uma nova linha.`);
+                    }
+                    existingIncDescs.add(descLower);
+                }
+
                 const plannedIncomes = Array.from(modal.querySelectorAll('.planned-income'));
                 for (const row of plannedIncomes) {
                     const incId = row.dataset.incomeId;
@@ -1187,8 +1313,8 @@ const Modals = {
                         newDesc = descInput.value.trim();
                         const hasAmount = amountStr !== '' && !isNaN(amount) && amount > 0;
                         const hasDesc = newDesc !== '';
-                        if ((hasAmount && !hasDesc) || (!hasAmount && hasDesc)) {
-                            throw new Error("Não é permitida a inserção parcial de dados. Preencha tanto a descrição quanto o valor nas receitas diárias.");
+                        if (hasAmount && !hasDesc) {
+                            throw new Error("Preencha a descrição para a receita inserida.");
                         }
                         if (newDesc && inc) inc.description = newDesc;
                     }
@@ -1309,6 +1435,61 @@ const Modals = {
                 let totalDaySum = 0;
                 const expensesToDelete = [];
 
+                // Collect existing descriptions per category to check for duplicates
+                const existingDescsPerCat = {};
+                const catGroupsForCheck = Array.from(container.querySelectorAll('.expense-detail-category-group'));
+                for (const catDiv of catGroupsForCheck) {
+                    const catId = catDiv.dataset.categoryId || catDiv.querySelector('.planned-items-container').dataset.catId;
+                    existingDescsPerCat[catId] = new Set();
+                    const plannedRows = Array.from(catDiv.querySelectorAll('.planned-expense'));
+                    for (const row of plannedRows) {
+                        const expId = row.dataset.expenseId;
+                        const exp = DataStore.currentMonth.expenses.find(e => e.id === expId);
+                        if (exp && exp.description) {
+                            existingDescsPerCat[catId].add(exp.description.trim().toLowerCase());
+                        }
+                    }
+                }
+
+                let unplannedCatId = null;
+                const unplannedCat = DataStore.categories.find(c => c.name.toLowerCase() === 'despesas não categorizadas');
+                if (unplannedCat) unplannedCatId = unplannedCat.id;
+
+                // Pre-validation for all new entries to prevent partial state saving and duplicates
+                const allNewExpenses = Array.from(modal.querySelectorAll('.extra-expense, .global-extra-expense'));
+                for (const row of allNewExpenses) {
+                    const descInput = row.querySelector('.extra-desc-input');
+                    const desc = descInput ? descInput.value.trim() : '';
+                    const amountStr = row.querySelector('.actual-amount-input').value.trim();
+                    const amount = parseFloat(amountStr);
+                    const hasAmount = amountStr !== '' && !isNaN(amount) && amount > 0;
+                    const hasDesc = desc !== '';
+                    
+                    if (!hasAmount && !hasDesc) continue; // Empty row, skip
+                    
+                    if (!hasAmount && hasDesc) throw new Error(`A despesa '${desc}' não possui valor. Insira o valor ou apague a descrição para continuar.`);
+                    if (hasAmount && !hasDesc) throw new Error("Preencha a descrição para a nova despesa.");
+
+                    // Check for duplicate description in the same category
+                    let targetCatId = null;
+                    if (row.classList.contains('global-extra-expense')) {
+                        targetCatId = unplannedCatId;
+                    } else {
+                        const parentCatGroup = row.closest('.expense-detail-category-group');
+                        if (parentCatGroup) {
+                            targetCatId = parentCatGroup.dataset.categoryId || parentCatGroup.querySelector('.planned-items-container').dataset.catId;
+                        }
+                    }
+
+                    if (targetCatId && existingDescsPerCat[targetCatId]) {
+                        const descLower = desc.toLowerCase();
+                        if (existingDescsPerCat[targetCatId].has(descLower)) {
+                            throw new Error(`A despesa '${desc}' já existe nesta categoria. Por favor, adicione o valor na linha já existente correspondente em vez de criar uma nova linha.`);
+                        }
+                        existingDescsPerCat[targetCatId].add(descLower);
+                    }
+                }
+
                 const catGroups = Array.from(container.querySelectorAll('.expense-detail-category-group'));
                 for (const catDiv of catGroups) {
                     const catId = catDiv.querySelector('.planned-items-container').dataset.catId;
@@ -1335,8 +1516,8 @@ const Modals = {
                             newDesc = descInput.value.trim();
                             const hasAmount = amountStr !== '' && !isNaN(amount) && amount > 0;
                             const hasDesc = newDesc !== '';
-                            if ((hasAmount && !hasDesc) || (!hasAmount && hasDesc)) {
-                                throw new Error("Não é permitida a inserção parcial de dados. Preencha tanto a descrição quanto o valor nas despesas diárias.");
+                            if (hasAmount && !hasDesc) {
+                                throw new Error("Preencha a descrição para a despesa inserida.");
                             }
                             if (newDesc) exp.description = newDesc;
                         }
@@ -1348,7 +1529,7 @@ const Modals = {
                                 exp.plannedAmount = amount;
                             }
                         } else {
-                            if (isUnplanned && exp) {
+                            if (exp && (isUnplanned || exp.plannedAmount === 0)) {
                                 expensesToDelete.push(expId);
                             }
                         }

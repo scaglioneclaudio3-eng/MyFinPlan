@@ -166,21 +166,32 @@ const Calendar = {
 
         title.textContent = `Detalhamento do Dia ${day}/${DataStore.currentMonth.month}/${DataStore.currentMonth.year}`;
 
-        // Render expenses planeadas (all of them, not just 5)
+        // Render expenses planeadas, efetivas e não categorizadas
         let expensesHtml = '';
+        
+        let plannedExpensesList = [];
         if (data.expenses && data.expenses.length > 0) {
-            expensesHtml += `<h5 style="margin-top: 5px; margin-bottom: 5px; color: #ffca28; font-size: 13px;">Despesas Planejadas:</h5>`;
-            expensesHtml += this.renderExpensePairs(data.expenses, day, true);
+            plannedExpensesList = data.expenses.filter(e => {
+                return e.category?.name?.toLowerCase() !== 'despesas não categorizadas';
+            });
+        }
+        
+        if (plannedExpensesList.length > 0) {
+            expensesHtml += `<h5 style="margin-top: 5px; margin-bottom: 5px; color: #4a90d9; font-size: 13px;">Despesas Planejadas:</h5>`;
+            expensesHtml += this.renderExpensePairs(plannedExpensesList, day, true);
         }
 
-        // Render despesas efetivas (pagas)
         const actualExpenseDetails = DataStore.currentMonth.dailyActualExpenseDetails?.[day] || {};
         const allMonthExpenses = DataStore.currentMonth.expenses || [];
         const categories = DataStore.categories || [];
         
         let actualExpensesList = [];
+        let uncategorizedExpensesList = [];
+
         for (const [catId, items] of Object.entries(actualExpenseDetails)) {
             const category = categories.find(c => c.id === catId);
+            const isUncategorized = category && category.name.toLowerCase() === 'despesas não categorizadas';
+
             for (const item of items) {
                 let desc = item.description;
                 if (!item.isExtra) {
@@ -189,11 +200,17 @@ const Calendar = {
                         desc = originalExpense.description;
                     }
                 }
-                actualExpensesList.push({
+                const entry = {
                     description: desc,
                     amount: item.amount,
                     category: category
-                });
+                };
+
+                if (isUncategorized) {
+                    uncategorizedExpensesList.push(entry);
+                } else {
+                    actualExpensesList.push(entry);
+                }
             }
         }
 
@@ -211,35 +228,114 @@ const Calendar = {
             `).join('');
         }
 
+        if (uncategorizedExpensesList.length > 0) {
+            expensesHtml += `<h5 style="margin-top: 15px; margin-bottom: 5px; color: #ffca28; font-size: 13px;">Despesas Não Categorizadas:</h5>`;
+            expensesHtml += uncategorizedExpensesList.map(item => `
+                <div class="calendar-expense-item">
+                    <div class="line-a">
+                        <span class="description" style="border-left: 6px solid ${item.category?.color || '#888'}; padding-left: 4px;">
+                            ${item.description}
+                        </span>
+                        <span class="amount" style="background-color: ${item.category?.color || '#888'}; padding: 0 4px; border-radius: 2px; color: #333;">${formatCurrency(item.amount)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         if (expensesHtml === '') {
             expensesHtml = '<div class="calendar-expense-item"><div class="line-a"><span class="description">Nenhuma despesa registrada</span></div></div>';
         }
 
         expenseList.innerHTML = expensesHtml;
 
-        // Render income details
-        const incomeDetails = DataStore.currentMonth.dailyActualIncomeDetails?.[day] || [];
+        // Render incomes planejadas, efetivas e não previstas
         const monthIncomes = DataStore.currentMonth.incomes || [];
-        if (incomeDetails.length > 0) {
-            incomeList.innerHTML = incomeDetails.map(item => {
-                let desc = item.description;
-                if (!desc && item.incomeId) {
-                    const originalIncome = monthIncomes.find(i => i.id === item.incomeId);
-                    if (originalIncome) {
-                        desc = originalIncome.description;
-                    }
-                }
-                return `
+        const isWknd = isWeekend(DataStore.currentMonth.year, DataStore.currentMonth.month, day);
+        const plannedIncomesList = monthIncomes.filter(inc => {
+            if (inc.isUnplanned) return false;
+            const pd = inc.plannedDate;
+            if (pd === 'all' || !pd) return true;
+            if (pd === 'fds' && isWknd) return true;
+            if (parseInt(pd) === day) return true;
+            return false;
+        });
+
+        let incomesHtml = '';
+        if (plannedIncomesList.length > 0) {
+            incomesHtml += `<h5 style="margin-top: 5px; margin-bottom: 5px; color: #4a90d9; font-size: 13px;">Receitas Planejadas:</h5>`;
+            incomesHtml += plannedIncomesList.map(item => `
                 <div class="calendar-expense-item">
                     <div class="line-a">
-                        <span class="description" style="border-left: 6px solid var(--success-color); padding-left: 4px;">${desc || 'Receita Efetiva'}</span>
+                        <span class="description" style="border-left: 6px solid #4a90d9; padding-left: 4px;">
+                            ${item.description}
+                        </span>
+                        <span class="amount" style="background-color: #4a90d9; padding: 0 4px; border-radius: 2px;">${formatCurrency(item.plannedAmount)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        const incomeDetails = DataStore.currentMonth.dailyActualIncomeDetails?.[day] || [];
+        let actualIncomesList = [];
+        let unplannedIncomesList = [];
+
+        for (const item of incomeDetails) {
+            let desc = item.description;
+            let isUnplanned = item.isExtra; 
+
+            if (!item.isExtra && item.incomeId) {
+                const originalIncome = monthIncomes.find(i => i.id === item.incomeId);
+                if (originalIncome) {
+                    desc = originalIncome.description;
+                    isUnplanned = originalIncome.isUnplanned;
+                }
+            }
+            
+            const entry = {
+                description: desc || 'Receita Efetiva',
+                amount: item.amount
+            };
+
+            if (isUnplanned) {
+                unplannedIncomesList.push(entry);
+            } else {
+                actualIncomesList.push(entry);
+            }
+        }
+
+        if (actualIncomesList.length > 0) {
+            incomesHtml += `<h5 style="margin-top: 15px; margin-bottom: 5px; color: var(--success-color); font-size: 13px;">Receitas Efetivas:</h5>`;
+            incomesHtml += actualIncomesList.map(item => `
+                <div class="calendar-expense-item">
+                    <div class="line-a">
+                        <span class="description" style="border-left: 6px solid var(--success-color); padding-left: 4px;">
+                            ${item.description}
+                        </span>
                         <span class="amount" style="background-color: var(--success-color); padding: 0 4px; border-radius: 2px;">${formatCurrency(item.amount)}</span>
                     </div>
                 </div>
-            `}).join('');
-        } else {
-            incomeList.innerHTML = `<div class="calendar-expense-item"><div class="line-a"><span class="description">Nenhuma receita efetiva registrada</span></div></div>`;
+            `).join('');
         }
+
+        if (unplannedIncomesList.length > 0) {
+            incomesHtml += `<h5 style="margin-top: 15px; margin-bottom: 5px; color: #b980f0; font-size: 13px;">Receitas Não Previstas:</h5>`;
+            incomesHtml += unplannedIncomesList.map(item => `
+                <div class="calendar-expense-item">
+                    <div class="line-a">
+                        <span class="description" style="border-left: 6px solid #b980f0; padding-left: 4px;">
+                            ${item.description}
+                        </span>
+                        <span class="amount" style="background-color: #b980f0; padding: 0 4px; border-radius: 2px; color: #fff;">${formatCurrency(item.amount)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        if (incomesHtml === '') {
+            incomesHtml = '<div class="calendar-expense-item"><div class="line-a"><span class="description">Nenhuma receita registrada</span></div></div>';
+        }
+
+        incomeList.innerHTML = incomesHtml;
 
         // Render summary
         const expenseTotal = data.totalPlanned || 0;

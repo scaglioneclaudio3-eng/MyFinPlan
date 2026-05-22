@@ -92,17 +92,17 @@
 
 .calendar-day-balance.positive {
     background-color: rgba(40, 167, 69, 0.2);
-    color: var(--success-color);
+    color: #000000;
 }
 
 .calendar-day-balance.negative {
     background-color: rgba(220, 53, 69, 0.2);
-    color: var(--danger-color);
+    color: #000000;
 }
 
 .calendar-day-balance.planned-pink {
     background-color: rgba(255, 182, 193, 0.5); /* Fundo rosa */
-    color: #b0003a; /* Rosa mais escuro para o texto */
+    color: #000000; /* changed to black */
 }
 
 .calendar-day-content {
@@ -189,21 +189,21 @@
 }
 
 .calendar-flux-item.plan {
-    color: var(--primary-color);
+    color: #000000;
 }
 
 .calendar-flux-item.efetivo {
-    color: var(--success-color);
+    color: #000000;
 }
 
 .calendar-income-item-v2.plan {
-    color: var(--secondary-color);
+    color: #000000;
     border-top: 1px solid var(--border-color);
     margin-top: 2px;
 }
 
 .calendar-income-item-v2.efetivo {
-    color: var(--success-color);
+    color: #000000;
 }
 
 .calendar-flux-item .amount,

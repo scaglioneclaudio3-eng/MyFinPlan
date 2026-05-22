@@ -212,6 +212,48 @@ const Categories = {
         
         const isUnplannedCat = category.name.toLowerCase() === 'despesas não categorizadas';
 
+        let hasOverdue = false;
+        const todayDate = new Date();
+        todayDate.setHours(0,0,0,0);
+        
+        if (!isUnplannedCat) {
+            for (const e of currentExpenses) {
+                let effectiveDay = e.plannedDate;
+                if (effectiveDay === -1) {
+                    effectiveDay = getNextWorkingDay(year, month, 1, holidays);
+                } else if (effectiveDay > 0) {
+                    effectiveDay = getEffectiveDate(year, month, e, holidays);
+                }
+
+                let isPastDue = false;
+                if (typeof effectiveDay === 'number' && effectiveDay > 0) {
+                    const plannedDateObj = new Date(year, month - 1, effectiveDay);
+                    if (plannedDateObj < todayDate) isPastDue = true;
+                } else if (e.plannedDate === -1) {
+                    isPastDue = true;
+                } else if (year < todayDate.getFullYear() || (year === todayDate.getFullYear() && month < todayDate.getMonth() + 1)) {
+                    isPastDue = true;
+                }
+
+                if (isPastDue) {
+                    let expPaidTotal = 0;
+                    for (const [day, catGroups] of Object.entries(detailsObj)) {
+                        if (catGroups[category.id]) {
+                            for (const item of catGroups[category.id]) {
+                                if (item.expenseId === e.id) {
+                                    expPaidTotal += item.amount;
+                                }
+                            }
+                        }
+                    }
+                    if (expPaidTotal < e.plannedAmount && !e.isFutureReminder) {
+                        hasOverdue = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         const card = document.createElement('div');
         card.className = 'category-card';
         card.dataset.categoryId = category.id;
@@ -229,7 +271,7 @@ const Categories = {
 
         card.innerHTML = `
             <div class="category-header">
-                <span class="category-color" style="background-color: ${category.color}"></span>
+                <span class="category-color ${hasOverdue ? 'blink-alert' : ''}" style="background-color: ${category.color}"></span>
                 <span class="category-name">${category.name}</span>
                 ${futureTotalHtml}
                 <div class="category-totals-wrapper" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center; font-size: 0.9em; font-weight: normal; padding-right: 15px;">
@@ -334,7 +376,7 @@ const Categories = {
             // Prefix description for future expenses
             const isFutureReminder = expense.isFutureReminder || expense.plannedDate === 0;
             const plannedAmountObjStr = (expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-';
-            const descriptionDisplay = expense.description;
+            let descriptionDisplay = expense.description;
 
             let paidTotalExp = 0;
             let paidDatesExp = [];
@@ -350,6 +392,23 @@ const Categories = {
                         }
                     }
                 }
+            }
+
+            let isPastDue = false;
+            const todayDate = new Date();
+            todayDate.setHours(0,0,0,0);
+            if (typeof effectiveDay === 'number' && effectiveDay > 0) {
+                const plannedDateObj = new Date(year, month - 1, effectiveDay);
+                if (plannedDateObj < todayDate) isPastDue = true;
+            } else if (expense.plannedDate === -1) {
+                isPastDue = true;
+            } else if (year < todayDate.getFullYear() || (year === todayDate.getFullYear() && month < todayDate.getMonth() + 1)) {
+                isPastDue = true;
+            }
+            
+            const needsBlink = isPastDue && (paidTotalExp < expense.plannedAmount) && !isFutureReminder && !isUnplannedCat;
+            if (needsBlink) {
+                descriptionDisplay = `<span class="blink-alert">${descriptionDisplay}</span>`;
             }
 
             let futureAmountHtml = '';

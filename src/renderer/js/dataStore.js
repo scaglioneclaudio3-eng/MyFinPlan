@@ -270,6 +270,38 @@ const DataStore = {
     },
 
     /**
+     * Helper to process future reminder dates and flip them to active if the target month is reached.
+     * @param {Object} item - The expense or income object
+     * @param {string} targetMonthId - The month being loaded (e.g., '2026-10')
+     */
+    /**
+     * Determines if a future reminder should be copied to the next month.
+     * A reminder is dropped if the source month was already its target month.
+     * @param {Object} item - The expense or income object
+     * @param {string} sourceMonthId - The month being copied FROM (e.g., '2026-10')
+     * @returns {boolean} true if it should be copied, false to drop
+     */
+    shouldCopyFutureReminder(item, sourceMonthId) {
+        if (!item.isFutureReminder) return true;
+        if (typeof item.plannedDate !== 'string') return true;
+
+        const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+        const lowerStr = item.plannedDate.toLowerCase();
+        const matchedMonthIndex = monthNames.findIndex(m => lowerStr.includes(m));
+        
+        if (matchedMonthIndex !== -1) {
+            const targetMonthInt = matchedMonthIndex + 1; // 1-12
+            const sourceMonthInt = parseInt(sourceMonthId.split('-')[1], 10);
+            
+            if (sourceMonthInt === targetMonthInt) {
+                return false; // Expired
+            }
+        }
+        
+        return true;
+    },
+
+    /**
      * Loads month data from disk
      * @param {number} year - The year
      * @param {number} month - The month (1-12)
@@ -278,10 +310,12 @@ const DataStore = {
         const monthId = this.getMonthId(year, month);
         const data = await window.api.readFile(`months/${monthId}.json`);
 
+        let isNewMonth = false;
         if (data) {
             this.currentMonth = data;
         } else {
             // Create new month
+            isNewMonth = true;
             this.currentMonth = {
                 id: monthId,
                 year: year,
@@ -295,46 +329,71 @@ const DataStore = {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
+        }
 
-            // AUTO-COPY LOGIC: Check previous month for templates
-            let prevYear = year;
-            let prevMonth = month - 1;
-            if (prevMonth === 0) {
-                prevMonth = 12;
-                prevYear -= 1;
-            }
-            const prevMonthId = this.getMonthId(prevYear, prevMonth);
-            const prevData = await window.api.readFile(`months/${prevMonthId}.json`);
+        // ALWAYS SYNC MISSING TEMPLATES FROM PREVIOUS MONTH
+        let prevYear = year;
+        let prevMonth = month - 1;
+        if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear -= 1;
+        }
+        const prevMonthId = this.getMonthId(prevYear, prevMonth);
+        const prevData = await window.api.readFile(`months/${prevMonthId}.json`);
 
-            let copiedCount = 0;
-            if (prevData && prevData.expenses) {
-                const templates = prevData.expenses.filter(e => e.isTemplate);
+        let copiedCount = 0;
+        let copiedIncomeCount = 0;
+        if (prevData) {
+            if (prevData.expenses) {
+                const templates = prevData.expenses.filter(e => e.isTemplate || e.isFutureReminder);
                 for (const t of templates) {
-                    this.currentMonth.expenses.push({
-                        id: generateId(),
-                        categoryId: t.categoryId,
-                        description: t.description, // Keep description
-                        plannedAmount: t.plannedAmount, // Copy exact amount as requested
-                        plannedDate: t.plannedDate, // Keep date
-                        isFutureReminder: t.isFutureReminder || false, // Keep future state
-                        paidAmount: null,
-                        paidDate: null,
-                        isTemplate: true, // Keep checked
-                        specialType: t.specialType || null,
-                        userDateOverride: t.userDateOverride || false
-                    });
-                    copiedCount++;
+                    // Check if a template with same category and description already exists
+                    const exists = this.currentMonth.expenses.some(e => 
+                        e.categoryId === t.categoryId && 
+                        e.description.trim().toLowerCase() === t.description.trim().toLowerCase()
+                    );
+
+                    if (!exists && this.shouldCopyFutureReminder(t, prevMonthId)) {
+                        this.currentMonth.expenses.push({
+                            ...t,
+                            id: generateId(),
+                            paidAmount: null,
+                            paidDate: null
+                        });
+                        copiedCount++;
+                    }
                 }
             }
 
-            await this.saveMonth();
+            if (prevData.incomes) {
+                const templates = prevData.incomes.filter(i => i.isTemplate || i.isFutureReminder);
+                for (const t of templates) {
+                    // Check if a template with same description already exists
+                    const exists = this.currentMonth.incomes.some(i => 
+                        i.description.trim().toLowerCase() === t.description.trim().toLowerCase()
+                    );
 
-            if (copiedCount > 0) {
-                // Defer toast slightly to ensure UI is ready or just fire it
-                setTimeout(() => {
-                    showToast(`${copiedCount} despesas recorrentes inseridas automaticamente.`, 'info', 5000);
-                }, 1000);
+                    if (!exists && this.shouldCopyFutureReminder(t, prevMonthId)) {
+                        this.currentMonth.incomes.push({
+                            ...t,
+                            id: generateId(),
+                            receivedAmount: null,
+                            receivedDate: null
+                        });
+                        copiedIncomeCount++;
+                    }
+                }
             }
+        }
+
+        if (isNewMonth || copiedCount > 0 || copiedIncomeCount > 0) {
+            await this.saveMonth();
+        }
+
+        if (copiedCount > 0 || copiedIncomeCount > 0) {
+            setTimeout(() => {
+                showToast(`${copiedCount + copiedIncomeCount} itens recorrentes inseridos automaticamente.`, 'info', 5000);
+            }, 1000);
         }
 
         // Load holidays for this year
@@ -575,33 +634,40 @@ const DataStore = {
 
         // Copy expenses
         const expensesToCopy = onlyTemplates
-            ? source.expenses.filter(e => e.isTemplate)
+            ? source.expenses.filter(e => e.isTemplate || e.isFutureReminder)
             : source.expenses;
 
         for (const expense of expensesToCopy) {
-            target.expenses.push({
-                id: generateId(),
-                categoryId: expense.categoryId,
-                description: expense.description,
-                plannedAmount: expense.plannedAmount,
-                plannedDate: expense.plannedDate,
-                paidAmount: null,
-                paidDate: null,
-                isTemplate: expense.isTemplate,
-                specialType: expense.specialType || null,
-                userDateOverride: expense.userDateOverride || false
-            });
+            if (this.shouldCopyFutureReminder(expense, sourceMonthId)) {
+                target.expenses.push({
+                    ...expense,
+                    id: generateId(),
+                    categoryId: expense.categoryId,
+                    description: expense.description,
+                    paidAmount: null,
+                    paidDate: null,
+                    isTemplate: expense.isTemplate,
+                    specialType: expense.specialType || null,
+                    userDateOverride: expense.userDateOverride || false
+                });
+            }
         }
 
         // Copy incomes
-        for (const income of source.incomes) {
-            target.incomes.push({
-                id: generateId(),
-                description: income.description,
-                plannedAmount: income.plannedAmount,
-                receivedAmount: null,
-                receivedDate: null
-            });
+        const incomesToCopy = onlyTemplates
+            ? source.incomes.filter(i => i.isTemplate || i.isFutureReminder)
+            : source.incomes;
+
+        for (const income of incomesToCopy) {
+            if (this.shouldCopyFutureReminder(income, sourceMonthId)) {
+                target.incomes.push({
+                    ...income,
+                    id: generateId(),
+                    description: income.description,
+                    receivedAmount: null,
+                    receivedDate: null
+                });
+            }
         }
 
         // Daily actual income is NOT copied
@@ -723,6 +789,7 @@ const DataStore = {
 
         // 2. INCOME (Planned) - Reusing logic but simpler loop
         const recurringIncomes = this.currentMonth.incomes.filter(i => {
+            if (i.isFutureReminder || i.plannedDate === 0) return false;
             const dateStr = String(i.plannedDate || '').toLowerCase();
             return dateStr === 'all' || dateStr === '';
         });
@@ -762,6 +829,7 @@ const DataStore = {
 
         // Add Dated Incomes (Specific Day) - Filter by Effective Date
         const datedIncomes = this.currentMonth.incomes.filter(i => {
+            if (i.isFutureReminder || i.plannedDate === 0) return false;
             const ds = String(i.plannedDate || '').toLowerCase();
             return ds !== 'all' && ds !== '';
         });

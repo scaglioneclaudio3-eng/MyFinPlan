@@ -170,6 +170,7 @@ const Modals = {
             document.getElementById('expense-planned-amount').value = expense.plannedAmount || '';
             document.getElementById('expense-planned-date').value = expense.plannedDate ?? '';
             document.getElementById('expense-is-template').checked = expense.isTemplate || false;
+            document.getElementById('expense-includes-fines').checked = expense.includesFines || false;
             document.getElementById('expense-special-type').value = expense.specialType || '';
             deleteBtn.style.display = 'block';
 
@@ -197,6 +198,7 @@ const Modals = {
             deleteBtn.style.display = 'none';
             document.getElementById('expense-paid-amount').value = '';
             document.getElementById('expense-paid-dates').value = '';
+            document.getElementById('expense-includes-fines').checked = false;
         }
 
         // Manage visibility of planned fields for "Não Planejadas"
@@ -286,6 +288,19 @@ const Modals = {
             } else {
                 specialTypeInput.disabled = false;
                 specialTypeInput.title = '';
+            }
+        }
+        
+        const finesCheckbox = document.getElementById('expense-includes-fines');
+        const finesGroup = document.getElementById('expense-fines-group');
+        if (finesCheckbox && finesGroup) {
+            const plannedDateInput = document.getElementById('expense-planned-date');
+            const plannedDateValue = (plannedDateInput.value || '').toString().trim().toLowerCase();
+            if (plannedDateValue === 'all' || plannedDateValue === 'fds') {
+                finesGroup.style.display = 'none';
+                finesCheckbox.checked = false;
+            } else {
+                finesGroup.style.display = 'block';
             }
         }
     },
@@ -1723,11 +1738,11 @@ const Modals = {
             const month = DataStore.currentMonth?.month || new Date().getMonth() + 1;
             const daysInMonth = typeof getDaysInMonth === 'function' ? getDaysInMonth(year, month) : 31;
             
-            if (plannedDate !== -1 && (plannedDate < 1 || plannedDate > daysInMonth)) {
+            if (plannedDate < 1 || plannedDate > daysInMonth) {
                 if (typeof showToast === 'function') {
-                    showToast(`O dia deve ser entre 1 e ${daysInMonth} para o mês atual, ou -1 para atrasado.`, 'error');
+                    showToast(`O dia deve ser entre 1 e ${daysInMonth} para o mês atual.`, 'error');
                 } else if (window.api && window.api.showMessage) {
-                    window.api.showMessage(`O dia deve ser entre 1 e ${daysInMonth} para o mês atual, ou -1 para atrasado.`, 'error');
+                    window.api.showMessage(`O dia deve ser entre 1 e ${daysInMonth} para o mês atual.`, 'error');
                 }
                 return;
             }
@@ -1746,6 +1761,7 @@ const Modals = {
             paidAmount: null,
             paidDate: null,
             isTemplate: document.getElementById('expense-is-template').checked,
+            includesFines: document.getElementById('expense-includes-fines') ? document.getElementById('expense-includes-fines').checked : false,
             specialType: isFutureReminder ? null : (document.getElementById('expense-special-type').value || null)
         };
 

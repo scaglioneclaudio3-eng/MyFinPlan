@@ -800,6 +800,11 @@ body {
     100% { opacity: 1; }
 }
 
+.blinking-text, .blinking-button {
+    animation: blink-animation 1.5s infinite;
+    color: var(--danger-color) !important;
+}
+
 .blink-alert {
     animation: blink-animation 1.5s linear infinite;
 }

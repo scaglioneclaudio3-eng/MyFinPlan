@@ -244,6 +244,16 @@ const App = {
         if (accumulatedFines) {
             accumulatedFines.textContent = formatCurrency(totals.accumulatedFines);
         }
+
+        const overpaid = document.getElementById('overpaid');
+        if (overpaid) {
+            overpaid.textContent = formatCurrency(totals.overpaid);
+        }
+
+        const exceedsPlanned = document.getElementById('exceeds-planned');
+        if (exceedsPlanned) {
+            exceedsPlanned.textContent = formatCurrency(totals.exceedsPlanned);
+        }
     },
 
     /**

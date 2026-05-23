@@ -143,6 +143,14 @@
                         <span class="summary-label">Multas/Juros Acum.</span>
                         <span id="accumulated-fines" class="summary-value expense">R$ 0,00</span>
                     </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Pago a Maior</span>
+                        <span id="overpaid" class="summary-value expense">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Excedente ao Planejado</span>
+                        <span id="exceeds-planned" class="summary-value expense">R$ 0,00</span>
+                    </div>
                 </div>
             </section>
 
@@ -243,15 +251,21 @@
                         Lembrete Despesas Meses Futuros
                     </label>
                 </div>
+                <div class="form-group" id="expense-fines-group">
+                    <label style="color: black;">
+                        <input type="checkbox" id="expense-includes-fines">
+                        Inclui multa/juros?
+                    </label>
+                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="expense-planned-amount">Valor Previsto (R$)</label>
-                        <input type="number" id="expense-planned-amount" step="0.01" min="0" required>
+                        <input type="number" id="expense-planned-amount" step="0.01" required>
                     </div>
                     <div class="form-group">
                         <label for="expense-planned-date">Dia Vencimento</label>
-                        <input type="text" id="expense-planned-date" placeholder="all, fds ou 1-31" required title="Digite 'all' para diário, 'fds' para finais de semana, -1: Atrasado, 0: Futuro, 1-31: Dia">
-                        <small>-1: Atrasado, 0: Futuro, 1-31: Dia, all: Diária, fds: Fins de Semana</small>
+                        <input type="text" id="expense-planned-date" placeholder="all, fds ou 1-31" required title="Digite 'all' para diário, 'fds' para finais de semana, 1-31: Dia">
+                        <small>1-31: Dia, all: Diária, fds: Fins de Semana</small>
                     </div>
                 </div>
                 <!-- NOVO: Campos bloqueados para receber do painel de efetivos diários -->

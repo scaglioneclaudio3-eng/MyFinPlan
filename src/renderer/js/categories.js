@@ -213,6 +213,7 @@ const Categories = {
         const isUnplannedCat = category.name.toLowerCase() === 'despesas não categorizadas';
 
         let hasOverdue = false;
+        let hasBlinkingOverdue = false;
         const todayDate = new Date();
         todayDate.setHours(0,0,0,0);
         
@@ -248,9 +249,12 @@ const Categories = {
                     }
                     if (expPaidTotal < e.plannedAmount && !e.isFutureReminder) {
                         hasOverdue = true;
-                        break;
+                        if (e.isFromPreviousMonth) {
+                            hasBlinkingOverdue = true;
+                        }
                     }
                 }
+                if (hasOverdue && hasBlinkingOverdue) break;
             }
         }
 
@@ -272,7 +276,7 @@ const Categories = {
         card.innerHTML = `
             <div class="category-header">
                 <span class="category-color ${hasOverdue ? 'blink-alert' : ''}" style="background-color: ${category.color}"></span>
-                <span class="category-name">${category.name}</span>
+                <span class="category-name ${hasBlinkingOverdue ? 'blinking-button' : ''}">${category.name}</span>
                 ${futureTotalHtml}
                 <div class="category-totals-wrapper" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center; font-size: 0.9em; font-weight: normal; padding-right: 15px;">
                     ${!isUnplannedCat ? `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><span style="display: inline-block; width: 85px; text-align: right; font-weight: bold;">${formatCurrency(currentTotal)}</span></div>` : ''}
@@ -408,7 +412,11 @@ const Categories = {
             
             const needsBlink = isPastDue && (paidTotalExp < expense.plannedAmount) && !isFutureReminder && !isUnplannedCat;
             if (needsBlink) {
-                descriptionDisplay = `<span class="blink-alert">${descriptionDisplay}</span>`;
+                if (expense.isFromPreviousMonth) {
+                    descriptionDisplay = `<span class="blinking-text">${descriptionDisplay}</span>`;
+                } else {
+                    descriptionDisplay = `<span class="blink-alert">${descriptionDisplay}</span>`;
+                }
             }
 
             let futureAmountHtml = '';

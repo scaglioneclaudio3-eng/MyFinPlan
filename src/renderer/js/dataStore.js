@@ -363,6 +363,42 @@ const DataStore = {
                         copiedCount++;
                     }
                 }
+                
+                // Rollover unpaid expenses
+                const unpaidExpenses = prevData.expenses.filter(e => {
+                    const planned = e.plannedAmount || 0;
+                    const paid = e.paidAmount || 0;
+                    return planned > 0 && paid < planned && !e.isFutureReminder; 
+                });
+                for (const u of unpaidExpenses) {
+                    const remainingBalance = (u.plannedAmount || 0) - (u.paidAmount || 0);
+                    const suffix = " (MÊS ANTERIOR)";
+                    let newDescription = u.description.trim();
+                    if (!newDescription.endsWith(suffix)) {
+                        newDescription += suffix;
+                    }
+                    
+                    const exists = this.currentMonth.expenses.some(e => 
+                        e.categoryId === u.categoryId && 
+                        e.description.trim().toLowerCase() === newDescription.toLowerCase() &&
+                        e.isFromPreviousMonth === true
+                    );
+                    
+                    if (!exists) {
+                        this.currentMonth.expenses.push({
+                            ...u,
+                            id: generateId(),
+                            description: newDescription,
+                            plannedAmount: remainingBalance,
+                            plannedDate: 1, // Set to 1st of the month
+                            paidAmount: null,
+                            paidDate: null,
+                            isFromPreviousMonth: true,
+                            isTemplate: false // Don't make the delayed bill a template itself
+                        });
+                        copiedCount++;
+                    }
+                }
             }
 
             if (prevData.incomes) {
@@ -782,9 +818,54 @@ const DataStore = {
             }
         }
 
-        // Fines (calculated from raw list because 'totalPaid' in daily bucket doesn't separate fines)
-        // Since paid amounts are decoupled from individual planned expenses, fines are no longer calculable this way.
+        // Calculate differences for Juros/Multa, Pago a Maior, Excedente ao Planejado
         totals.accumulatedFines = 0;
+        totals.overpaid = 0;
+        totals.exceedsPlanned = 0;
+        
+        const detailsObj = this.currentMonth.dailyActualExpenseDetails || {};
+        for (const e of this.currentMonth.expenses) {
+            if (e.isFutureReminder) continue;
+
+            let expPaidTotal = 0;
+            let lastPaidDay = 0;
+            for (const [day, catGroups] of Object.entries(detailsObj)) {
+                if (catGroups[e.categoryId]) {
+                    for (const item of catGroups[e.categoryId]) {
+                        if (item.expenseId === e.id) {
+                            expPaidTotal += item.amount || 0;
+                            lastPaidDay = Math.max(lastPaidDay, parseInt(day));
+                        }
+                    }
+                }
+            }
+
+            const plannedAmount = e.plannedAmount || 0;
+            if (expPaidTotal > plannedAmount) {
+                const diff = expPaidTotal - plannedAmount;
+                const includesFines = e.includesFines || false;
+                const dateStr = String(e.plannedDate || '').toLowerCase();
+                const isRecurring = dateStr === 'all' || dateStr === 'fds';
+
+                if (!includesFines || isRecurring) {
+                    totals.exceedsPlanned += diff;
+                } else {
+                    let effectiveDay = e.plannedDate;
+                    if (effectiveDay === -1) {
+                        totals.accumulatedFines += diff; // Always late
+                    } else if (effectiveDay > 0) {
+                        effectiveDay = getEffectiveDate(year, month, e, this.holidays);
+                        if (lastPaidDay > effectiveDay) {
+                            totals.accumulatedFines += diff;
+                        } else {
+                            totals.overpaid += diff;
+                        }
+                    } else {
+                        totals.overpaid += diff;
+                    }
+                }
+            }
+        }
 
 
         // 2. INCOME (Planned) - Reusing logic but simpler loop

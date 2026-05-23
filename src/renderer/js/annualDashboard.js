@@ -160,18 +160,14 @@ function renderAnnualChart() {
         datasets.push({
             label: cat.name,
             data: cat.data,
+            backgroundColor: cat.color,
             borderColor: cat.color,
-            backgroundColor: cat.color + '33', // 20% opacity
-            tension: 0, // STRAIGHT LINES (requested by user)
-            fill: false,
-            borderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 6
+            borderWidth: 1
         });
     }
 
     annualChartInstance = new Chart(canvas, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: annualChartData.labels,
             datasets: datasets
@@ -191,7 +187,7 @@ function renderAnnualChart() {
                                 label += ': ';
                             }
                             if (context.parsed.y !== null) {
-                                label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                                label += formatCurrency(context.parsed.y);
                             }
                             return label;
                         }
@@ -201,22 +197,22 @@ function renderAnnualChart() {
             scales: {
                 x: {
                     ticks: {
-                        color: '#e8eaed'
+                        color: '#5d5843'
                     },
                     grid: {
-                        color: '#3d4450'
+                        color: '#ccbe8b'
                     }
                 },
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        color: '#e8eaed',
+                        color: '#5d5843',
                         callback: function(value) {
-                            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+                            return formatCurrency(value);
                         }
                     },
                     grid: {
-                        color: '#3d4450'
+                        color: '#ccbe8b'
                     }
                 }
             }

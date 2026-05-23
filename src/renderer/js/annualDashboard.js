@@ -14,6 +14,12 @@ const chartColors = [
     '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'
 ];
 
+const darkColors = [
+    '#000000', '#000080', '#8B0000', '#006400', '#4B0082',
+    '#2F4F4F', '#8B4513', '#483D8B', '#800000', '#008080',
+    '#556B2F', '#8B008B', '#191970', '#808000', '#696969'
+];
+
 async function initializeAnnualDashboard() {
     const year = document.getElementById('year-select').value || new Date().getFullYear();
     const data = await window.api.getYearData(year);
@@ -75,7 +81,7 @@ async function initializeAnnualDashboard() {
                     const cat = data.categories.find(c => c.id === exp.categoryId);
                     categoriesMap.set(exp.categoryId, {
                         name: cat ? cat.name : 'Desconhecida',
-                        color: cat ? cat.color : chartColors[categoriesMap.size % chartColors.length],
+                        color: darkColors[categoriesMap.size % darkColors.length],
                         data: new Array(12).fill(0)
                     });
                 }

@@ -160,14 +160,18 @@ function renderAnnualChart() {
         datasets.push({
             label: cat.name,
             data: cat.data,
-            backgroundColor: cat.color,
+            backgroundColor: cat.color + '33', // 20% opacity
             borderColor: cat.color,
-            borderWidth: 1
+            borderWidth: 2,
+            tension: 0,
+            fill: false,
+            pointRadius: 4,
+            pointHoverRadius: 6
         });
     }
 
     annualChartInstance = new Chart(canvas, {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: annualChartData.labels,
             datasets: datasets

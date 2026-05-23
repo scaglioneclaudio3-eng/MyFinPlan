@@ -16,7 +16,7 @@ const chartColors = [
 
 async function initializeAnnualDashboard() {
     const year = document.getElementById('year-select').value || new Date().getFullYear();
-    const data = await window.api.invoke('get-year-data', year);
+    const data = await window.api.getYearData(year);
 
     // Add general aggregates
     const monthLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];

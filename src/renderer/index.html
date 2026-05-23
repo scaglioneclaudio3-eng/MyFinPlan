@@ -206,13 +206,13 @@
             <!-- Annual Dashboard View -->
             <section id="annual-view" class="view">
                 <div class="annual-dashboard-container" style="display: flex; gap: 20px; height: 100%; padding: 20px;">
-                    <div class="annual-sidebar" style="width: 250px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow-y: auto;">
-                        <h3 style="margin-top: 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Categorias Visíveis</h3>
+                    <div class="annual-sidebar" style="width: 250px; background: var(--bg-secondary); padding: 15px; border-radius: 8px; box-shadow: var(--shadow-sm); overflow-y: auto; color: var(--text-primary);">
+                        <h3 style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Categorias Visíveis</h3>
                         <div id="annual-category-toggles" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
                             <!-- Checkboxes will be injected here -->
                         </div>
                     </div>
-                    <div class="annual-chart-container" style="flex: 1; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div class="annual-chart-container" style="flex: 1; background: var(--bg-secondary); padding: 15px; border-radius: 8px; box-shadow: var(--shadow-sm); color: var(--text-primary);">
                         <h3 style="margin-top: 0;">Evolução Anual</h3>
                         <div style="height: calc(100vh - 180px); width: 100%;">
                             <canvas id="annual-chart"></canvas>

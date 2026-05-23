@@ -199,12 +199,24 @@ function renderAnnualChart() {
                 }
             },
             scales: {
+                x: {
+                    ticks: {
+                        color: '#e8eaed'
+                    },
+                    grid: {
+                        color: '#3d4450'
+                    }
+                },
                 y: {
                     beginAtZero: true,
                     ticks: {
+                        color: '#e8eaed',
                         callback: function(value) {
                             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
                         }
+                    },
+                    grid: {
+                        color: '#3d4450'
                     }
                 }
             }

@@ -22,9 +22,14 @@ contextBridge.exposeInMainWorld('api', {
     getCachePath: () => ipcRenderer.invoke('get-cache-path'),
 
     // Backup
-    createBackup: () => ipcRenderer.invoke('create-backup'),
+    showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
 
-    // Holidays
+    getYearData: (year) => ipcRenderer.invoke('get-year-data', year),
+    exportCsv: (csvContent) => ipcRenderer.invoke('export-csv', csvContent),
+    createBackupDialog: (data) => ipcRenderer.invoke('create-backup-dialog', data),
+    
+    // Listeners
+    createBackup: () => ipcRenderer.invoke('create-backup'),
     fetchHolidays: (year, state) => ipcRenderer.invoke('fetch-holidays', year, state),
 
     // Menu event listeners

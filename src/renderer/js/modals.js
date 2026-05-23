@@ -150,16 +150,25 @@ const Modals = {
         // Reset form
         form.reset();
 
+        const categorySelect = document.getElementById('expense-category-id');
+        categorySelect.innerHTML = '';
+        const currentMonthId = DataStore.currentMonth?.id;
+        const availableCategories = DataStore.categories.filter(cat => {
+            if (!cat.hiddenFrom) return true;
+            return currentMonthId < cat.hiddenFrom;
+        });
+
+        for (const cat of availableCategories) {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.name;
+            categorySelect.appendChild(option);
+        }
+
+        categorySelect.value = categoryId || expense?.categoryId || '';
         document.getElementById('expense-id').value = expense?.id || '';
-        document.getElementById('expense-category-id').value = categoryId || expense?.categoryId || '';
 
         if (expense) {
-            // Strictly block unplanned expense editing via main modal
-            const checkCat = DataStore.categories.find(c => c.id === expense.categoryId);
-            if (checkCat && checkCat.name.toLowerCase() === 'despesas não categorizadas') {
-                if (typeof showToast === 'function') showToast('Despesas dessa categoria só podem ser editadas pelo popup diário.', 'warning');
-                return;
-            }
 
             title.textContent = 'Editar Lançamento';
             document.getElementById('expense-description').readOnly = false;
@@ -220,7 +229,30 @@ const Modals = {
         const paidRow = document.getElementById('expense-paid-row');
         const isTemplateCb = document.getElementById('expense-is-template');
         const specialTypeInput = document.getElementById('expense-special-type');
-        
+        const categorySelect = document.getElementById('expense-category-id');
+
+        const updateUnplannedVisibility = () => {
+            const selectedCatId = categorySelect.value;
+            const cat = DataStore.categories.find(c => c.id === selectedCatId);
+            const isUnp = cat && cat.name.toLowerCase() === 'despesas não categorizadas';
+            
+            if (isUnp) {
+                plannedRow.style.display = 'none';
+                plannedAmountInput.required = false;
+                plannedDateInput.required = false;
+                isFutureCb.closest('.form-group').style.display = 'none';
+                plannedAmountInput.value = 0;
+                plannedDateInput.value = 1; 
+            } else {
+                plannedRow.style.display = '';
+                plannedAmountInput.required = true;
+                plannedDateInput.required = true;
+                isFutureCb.closest('.form-group').style.display = 'block';
+            }
+        };
+
+        categorySelect.onchange = updateUnplannedVisibility;
+
         isFutureCb.onchange = (e) => {
             if (e.target.checked) {
                 plannedDateInput.placeholder = "mês (ex: jan) ou dia, mês (ex: 15, jan)";
@@ -241,21 +273,7 @@ const Modals = {
             }
         };
 
-        if (isUnplanned) {
-            plannedRow.style.display = 'none';
-            plannedAmountInput.required = false;
-            plannedDateInput.required = false;
-            isFutureCb.closest('.form-group').style.display = 'none';
-            
-            // Set some valid defaults so the form can still submit if needed
-            plannedAmountInput.value = 0;
-            plannedDateInput.value = expense?.plannedDate || 1; 
-        } else {
-            plannedRow.style.display = '';
-            plannedAmountInput.required = true;
-            plannedDateInput.required = true;
-            isFutureCb.closest('.form-group').style.display = 'block';
-        }
+        updateUnplannedVisibility();
         
         // Trigger manual execution
         isFutureCb.onchange({ target: isFutureCb });
@@ -1238,6 +1256,126 @@ const Modals = {
             this.closeAll();
         });
 
+        // Export CSV
+        const btnExportCsv = document.getElementById('btn-export-csv');
+        if (btnExportCsv) {
+            btnExportCsv.addEventListener('click', async () => {
+                const year = DataStore.currentMonth?.year;
+                const month = DataStore.currentMonth?.month;
+                if (!year || !month) return;
+
+                let csvLines = [];
+                csvLines.push(`Relatorio de Financas - ${month}/${year}`);
+                csvLines.push('');
+                
+                // Receitas
+                csvLines.push('RECEITAS');
+                csvLines.push('Descricao;Previsto;Dia Previsto;Recebido;Dias Recebidos');
+                
+                let totalIncPlan = 0;
+                let totalIncRec = 0;
+
+                for (const inc of DataStore.currentMonth.incomes || []) {
+                    const desc = inc.description || '';
+                    const planAmt = inc.plannedAmount || 0;
+                    const planDate = inc.plannedDate || '';
+                    
+                    let recAmt = 0;
+                    let recDays = [];
+                    if (DataStore.currentMonth.dailyActualIncomeDetails) {
+                        for (const day in DataStore.currentMonth.dailyActualIncomeDetails) {
+                            for (const item of DataStore.currentMonth.dailyActualIncomeDetails[day]) {
+                                if (item.incomeId === inc.id) {
+                                    recAmt += item.amount;
+                                    recDays.push(day);
+                                }
+                            }
+                        }
+                    } else {
+                        recAmt = inc.receivedAmount || 0;
+                        if (inc.receivedDate) recDays.push(inc.receivedDate);
+                    }
+
+                    totalIncPlan += planAmt;
+                    totalIncRec += recAmt;
+
+                    csvLines.push(`${desc};${planAmt.toFixed(2)};${planDate};${recAmt.toFixed(2)};${recDays.join(', ')}`);
+                }
+                csvLines.push(`TOTAL RECEITAS;${totalIncPlan.toFixed(2)};;${totalIncRec.toFixed(2)};`);
+                csvLines.push('');
+
+                // Despesas
+                csvLines.push('DESPESAS');
+                csvLines.push('Categoria;Descricao;Previsto;Dia Previsto;Pago;Dias Pagos');
+                
+                let totalExpPlan = 0;
+                let totalExpPaid = 0;
+
+                const sortedExpenses = [...(DataStore.currentMonth.expenses || [])].sort((a, b) => {
+                    const catA = DataStore.categories.find(c => c.id === a.categoryId)?.name || '';
+                    const catB = DataStore.categories.find(c => c.id === b.categoryId)?.name || '';
+                    return catA.localeCompare(catB);
+                });
+
+                for (const exp of sortedExpenses) {
+                    const catName = DataStore.categories.find(c => c.id === exp.categoryId)?.name || '';
+                    const desc = exp.description || '';
+                    const planAmt = exp.plannedAmount || 0;
+                    const planDate = exp.plannedDate || '';
+                    
+                    let paidAmt = 0;
+                    let paidDays = [];
+                    if (DataStore.currentMonth.dailyActualExpenseDetails) {
+                        for (const day in DataStore.currentMonth.dailyActualExpenseDetails) {
+                            const items = DataStore.currentMonth.dailyActualExpenseDetails[day][exp.categoryId];
+                            if (items) {
+                                for (const item of items) {
+                                    if (item.expenseId === exp.id) {
+                                        paidAmt += item.amount;
+                                        if (!paidDays.includes(day)) paidDays.push(day);
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        paidAmt = exp.paidAmount || 0;
+                        if (exp.paidDate) paidDays.push(exp.paidDate);
+                    }
+
+                    totalExpPlan += planAmt;
+                    totalExpPaid += paidAmt;
+
+                    csvLines.push(`${catName};${desc};${planAmt.toFixed(2)};${planDate};${paidAmt.toFixed(2)};${paidDays.join(', ')}`);
+                }
+                csvLines.push(`;TOTAL DESPESAS;${totalExpPlan.toFixed(2)};;${totalExpPaid.toFixed(2)};`);
+                
+                const success = await window.api.exportCsv(csvLines.join('\n'));
+                if (success) {
+                    showToast('CSV exportado com sucesso', 'success');
+                    this.closeAll();
+                }
+            });
+        }
+
+        // Export Backup
+        const btnExportBackup = document.getElementById('btn-export-backup');
+        if (btnExportBackup) {
+            btnExportBackup.addEventListener('click', async () => {
+                const yearData = await window.api.getYearData(DataStore.currentMonth?.year || new Date().getFullYear());
+                const backupData = {
+                    timestamp: new Date().toISOString(),
+                    settings: DataStore.settings,
+                    categories: yearData.categories,
+                    months: yearData.months
+                };
+                const success = await window.api.createBackupDialog(backupData);
+                if (success) {
+                    showToast('Backup gerado com sucesso', 'success');
+                    this.closeAll();
+                }
+            });
+        }
+
         // Copy month form submission
         document.getElementById('copy-month-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1722,7 +1860,7 @@ const Modals = {
         } else if (plannedDateInput.toLowerCase() === 'all' || plannedDateInput.toLowerCase() === 'fds') {
             plannedDate = plannedDateInput.toLowerCase();
         } else {
-            const regex = /^-?\d+$/;
+            const regex = /^\d+$/;
             if (!regex.test(plannedDateInput)) {
                 if (typeof showToast === 'function') {
                     showToast('Data inválida. Insira um dia numérico, "all" ou "fds". Para mês futuro, marque Lembrete.', 'error');

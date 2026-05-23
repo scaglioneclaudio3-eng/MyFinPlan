@@ -232,6 +232,59 @@ function setupIpcHandlers() {
         }
     });
 
+    ipcMain.handle('get-year-data', async (event, year) => {
+        try {
+            const data = {
+                categories: [],
+                months: {}
+            };
+            const catPath = path.join(dataPath, 'categories.json');
+            if (fs.existsSync(catPath)) {
+                data.categories = JSON.parse(await fs.promises.readFile(catPath, 'utf-8'));
+            }
+            if (fs.existsSync(monthsPath)) {
+                const files = fs.readdirSync(monthsPath);
+                for (const file of files) {
+                    if (file.startsWith(`${year}-`) && file.endsWith('.json')) {
+                        const monthId = file.replace('.json', '');
+                        const content = await fs.promises.readFile(path.join(monthsPath, file), 'utf-8');
+                        data.months[monthId] = JSON.parse(content);
+                    }
+                }
+            }
+            return data;
+        } catch (error) {
+            console.error('Error getting year data:', error);
+            return { categories: [], months: {} };
+        }
+    });
+
+    ipcMain.handle('export-csv', async (event, csvContent) => {
+        const result = await dialog.showSaveDialog(mainWindow, {
+            title: 'Exportar CSV',
+            defaultPath: `financas-${new Date().toISOString().slice(0,10)}.csv`,
+            filters: [{ name: 'CSV', extensions: ['csv'] }]
+        });
+        if (!result.canceled && result.filePath) {
+            await fs.promises.writeFile(result.filePath, '\ufeff' + csvContent, 'utf8');
+            return true;
+        }
+        return false;
+    });
+
+    ipcMain.handle('create-backup-dialog', async (event, backupData) => {
+        const result = await dialog.showSaveDialog(mainWindow, {
+            title: 'Salvar Backup JSON',
+            defaultPath: `financas-backup-${new Date().toISOString().slice(0,10)}.json`,
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+        if (!result.canceled && result.filePath) {
+            await fs.promises.writeFile(result.filePath, JSON.stringify(backupData, null, 2), 'utf8');
+            return true;
+        }
+        return false;
+    });
+
     ipcMain.handle('create-backup', async () => {
         try {
             const timestamp = new Date().toISOString().slice(0, 10);

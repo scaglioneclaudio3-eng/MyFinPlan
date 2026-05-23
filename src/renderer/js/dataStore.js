@@ -365,13 +365,38 @@ const DataStore = {
                 }
                 
                 // Rollover unpaid expenses
-                const unpaidExpenses = prevData.expenses.filter(e => {
+                const unpaidExpenses = [];
+                for (const e of prevData.expenses) {
+                    if (e.isFutureReminder) continue;
                     const planned = e.plannedAmount || 0;
-                    const paid = e.paidAmount || 0;
-                    return planned > 0 && paid < planned && !e.isFutureReminder; 
-                });
+                    if (planned <= 0) continue;
+
+                    let totalPaid = 0;
+                    if (prevData.dailyActualExpenseDetails) {
+                        for (const day in prevData.dailyActualExpenseDetails) {
+                            const items = prevData.dailyActualExpenseDetails[day][e.categoryId];
+                            if (items) {
+                                for (const item of items) {
+                                    if (item.expenseId === e.id) {
+                                        totalPaid += item.amount;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        totalPaid = e.paidAmount || 0;
+                    }
+
+                    if (totalPaid < planned) {
+                        unpaidExpenses.push({
+                            ...e,
+                            remainingBalance: planned - totalPaid
+                        });
+                    }
+                }
+                
                 for (const u of unpaidExpenses) {
-                    const remainingBalance = (u.plannedAmount || 0) - (u.paidAmount || 0);
+                    const remainingBalance = u.remainingBalance;
                     const suffix = " (MÊS ANTERIOR)";
                     let newDescription = u.description.trim();
                     if (!newDescription.endsWith(suffix)) {
@@ -479,10 +504,38 @@ const DataStore = {
     async updateExpense(id, updates) {
         const index = this.currentMonth.expenses.findIndex(e => e.id === id);
         if (index !== -1) {
+            const oldExpense = this.currentMonth.expenses[index];
+            const oldCategoryId = oldExpense.categoryId;
+            const newCategoryId = updates.categoryId;
+            
             this.currentMonth.expenses[index] = {
-                ...this.currentMonth.expenses[index],
+                ...oldExpense,
                 ...updates
             };
+
+            // Migrate payments if category changed
+            if (newCategoryId && oldCategoryId && oldCategoryId !== newCategoryId) {
+                if (this.currentMonth.dailyActualExpenseDetails) {
+                    for (const day in this.currentMonth.dailyActualExpenseDetails) {
+                        const dayDetails = this.currentMonth.dailyActualExpenseDetails[day];
+                        if (dayDetails[oldCategoryId]) {
+                            // Find payments for this expense in the old category
+                            const paymentsToMove = dayDetails[oldCategoryId].filter(p => p.expenseId === id);
+                            if (paymentsToMove.length > 0) {
+                                // Remove from old category
+                                dayDetails[oldCategoryId] = dayDetails[oldCategoryId].filter(p => p.expenseId !== id);
+                                
+                                // Add to new category
+                                if (!dayDetails[newCategoryId]) {
+                                    dayDetails[newCategoryId] = [];
+                                }
+                                dayDetails[newCategoryId].push(...paymentsToMove);
+                            }
+                        }
+                    }
+                }
+            }
+
             await this.saveMonth();
             return this.currentMonth.expenses[index];
         }
@@ -850,19 +903,7 @@ const DataStore = {
                 if (!includesFines || isRecurring) {
                     totals.exceedsPlanned += diff;
                 } else {
-                    let effectiveDay = e.plannedDate;
-                    if (effectiveDay === -1) {
-                        totals.accumulatedFines += diff; // Always late
-                    } else if (effectiveDay > 0) {
-                        effectiveDay = getEffectiveDate(year, month, e, this.holidays);
-                        if (lastPaidDay > effectiveDay) {
-                            totals.accumulatedFines += diff;
-                        } else {
-                            totals.overpaid += diff;
-                        }
-                    } else {
-                        totals.overpaid += diff;
-                    }
+                    totals.accumulatedFines += diff;
                 }
             }
         }

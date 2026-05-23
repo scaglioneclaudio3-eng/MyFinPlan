@@ -48,6 +48,7 @@
                 <button class="tab-btn" data-view="calendar">Calendário</button>
                 <button class="tab-btn" data-view="charts-1">Gráfico: Despesas por Categoria</button>
                 <button class="tab-btn" data-view="charts-2">Gráfico: Fluxos de Caixa Planejado e Efetivo</button>
+                <button class="tab-btn" data-view="annual">Visão Anual</button>
                 <button class="tab-btn" data-view="print">Imprimir Despesas</button>
             </div>
         </header>
@@ -201,6 +202,24 @@
                     <canvas id="cashflow-chart"></canvas>
                 </div>
             </section>
+
+            <!-- Annual Dashboard View -->
+            <section id="annual-view" class="view">
+                <div class="annual-dashboard-container" style="display: flex; gap: 20px; height: 100%; padding: 20px;">
+                    <div class="annual-sidebar" style="width: 250px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow-y: auto;">
+                        <h3 style="margin-top: 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Categorias Visíveis</h3>
+                        <div id="annual-category-toggles" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                            <!-- Checkboxes will be injected here -->
+                        </div>
+                    </div>
+                    <div class="annual-chart-container" style="flex: 1; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h3 style="margin-top: 0;">Evolução Anual</h3>
+                        <div style="height: calc(100vh - 180px); width: 100%;">
+                            <canvas id="annual-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
 
 
@@ -240,7 +259,10 @@
             </div>
             <form id="expense-form">
                 <input type="hidden" id="expense-id">
-                <input type="hidden" id="expense-category-id">
+                <div class="form-group" id="expense-category-group">
+                    <label for="expense-category-id">Categoria</label>
+                    <select id="expense-category-id" required></select>
+                </div>
                 <div class="form-group">
                     <label for="expense-description">Descrição</label>
                     <input type="text" id="expense-description" required maxlength="100">
@@ -474,6 +496,13 @@
                         <input type="number" id="setting-backup-days" min="1" max="30" value="7">
                     </div>
                 </div>
+                <div class="settings-section">
+                    <h4>Ações Manuais</h4>
+                    <div class="form-row" style="gap: 10px;">
+                        <button type="button" class="btn btn-secondary" id="btn-export-csv" style="flex: 1;">📄 Exportar CSV</button>
+                        <button type="button" class="btn btn-secondary" id="btn-export-backup" style="flex: 1;">💾 Gerar Backup JSON</button>
+                    </div>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Salvar</button>
@@ -620,6 +649,7 @@
     <script src="js/charts.js"></script>
     <script src="js/modals.js"></script>
     <script src="js/print.js"></script>
+    <script src="js/annualDashboard.js"></script>
 
     <script src="js/app.js"></script>
 </body>

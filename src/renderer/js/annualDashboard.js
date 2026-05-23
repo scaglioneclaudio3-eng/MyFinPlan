@@ -160,12 +160,12 @@ function renderAnnualChart() {
         datasets.push({
             label: cat.name,
             data: cat.data,
-            backgroundColor: cat.color + '33', // 20% opacity
+            backgroundColor: 'transparent',
             borderColor: cat.color,
-            borderWidth: 2,
-            tension: 0,
+            borderWidth: 3,
+            tension: 0.1,
             fill: false,
-            pointRadius: 4,
+            pointRadius: 3,
             pointHoverRadius: 6
         });
     }

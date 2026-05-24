@@ -144,10 +144,7 @@
                         <span class="summary-label">Multas/Juros Acum.</span>
                         <span id="accumulated-fines" class="summary-value expense">R$ 0,00</span>
                     </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Pago a Maior</span>
-                        <span id="overpaid" class="summary-value expense">R$ 0,00</span>
-                    </div>
+
                     <div class="summary-item">
                         <span class="summary-label">Excedente ao Planejado</span>
                         <span id="exceeds-planned" class="summary-value expense">R$ 0,00</span>
@@ -498,9 +495,16 @@
                 </div>
                 <div class="settings-section">
                     <h4>Ações Manuais</h4>
-                    <div class="form-row" style="gap: 10px;">
-                        <button type="button" class="btn btn-secondary" id="btn-export-csv" style="flex: 1;">📄 Exportar CSV</button>
-                        <button type="button" class="btn btn-secondary" id="btn-export-backup" style="flex: 1;">💾 Gerar Backup JSON</button>
+                    <div class="form-row" style="gap: 10px; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <button type="button" class="btn btn-secondary" id="btn-export-csv" style="width: 100%;">📄 Exportar CSV</button>
+                        </div>
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                            <button type="button" class="btn btn-secondary" id="btn-export-backup" style="width: 100%;">💾 Gerar Backup JSON</button>
+                            <p style="margin-top: 8px; font-size: 0.85em; color: black; text-align: center; line-height: 1.2;">
+                                * O backup JSON possibilita restaurar todo o aplicativo na data em que foi gerado, podendo ser salvo em um pendrive ou nuvem para sua segurança.
+                            </p>
+                        </div>
                     </div>
                 </div>
                 <div class="form-actions">
@@ -637,6 +641,28 @@
 
     <!-- Toast notifications container -->
     <div id="toast-container"></div>
+    <!-- Past Delete Prompt Modal -->
+    <div id="past-delete-prompt-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Atenção: Modificação de Dados Antigos</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 15px;">
+                <p style="margin-bottom: 15px; font-size: 0.9em; padding: 0 10px;">Você está tentando deletar um item em um mês passado.<br>Deletar este item apagará ele e todas as suas entradas nos meses futuros.</p>
+                <p style="margin-bottom: 15px; font-weight: bold; font-size: 0.9em;">O que você deseja fazer?</p>
+                
+                <div style="display: flex; justify-content: center;">
+                    <div style="display: flex; flex-direction: column; gap: 8px; width: 320px;">
+                        <button id="past-prompt-edit-desc" class="btn btn-primary" style="font-size: 12px; padding: 8px;">Quero apenas alterar a DESCRIÇÃO</button>
+                        <button id="past-prompt-edit-cat" class="btn btn-primary" style="font-size: 12px; padding: 8px;">Quero adicionar a OUTRA CATEGORIA</button>
+                        <button id="past-prompt-delete" class="btn btn-danger" style="margin-top: 10px; font-size: 12px; padding: 8px;">Tenho certeza que quero DELETAR</button>
+                        <button class="btn btn-secondary" data-dismiss="modal" style="margin-top: 5px; font-size: 12px; padding: 8px;">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Scripts -->
     <script src="js/utils.js"></script>

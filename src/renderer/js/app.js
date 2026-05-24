@@ -245,10 +245,7 @@ const App = {
             accumulatedFines.textContent = formatCurrency(totals.accumulatedFines);
         }
 
-        const overpaid = document.getElementById('overpaid');
-        if (overpaid) {
-            overpaid.textContent = formatCurrency(totals.overpaid);
-        }
+
 
         const exceedsPlanned = document.getElementById('exceeds-planned');
         if (exceedsPlanned) {

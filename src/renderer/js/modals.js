@@ -85,11 +85,10 @@ const Modals = {
     openCategoryModal(category = null) {
         if (this.isPastMonth()) {
             if (typeof showToast === 'function') {
-                showToast('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error', 6000);
+                showToast('Aviso: alterações de dados em meses passados podem alterar ou cancelar a entrada de dados de meses futuros.', 'warning', 6000);
             } else if (window.api && window.api.showMessage) {
-                window.api.showMessage('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error');
+                window.api.showMessage('Aviso: alterações de dados em meses passados podem alterar ou cancelar a entrada de dados de meses futuros.', 'warning');
             }
-            return;
         }
 
         const modal = document.getElementById('category-modal');
@@ -135,11 +134,10 @@ const Modals = {
     openExpenseModal(expense = null, categoryId = null) {
         if (this.isPastMonth()) {
             if (typeof showToast === 'function') {
-                showToast('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error', 6000);
+                showToast('Aviso: alterações de dados em meses passados podem alterar ou cancelar a entrada de dados de meses futuros.', 'warning', 6000);
             } else if (window.api && window.api.showMessage) {
-                window.api.showMessage('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error');
+                window.api.showMessage('Aviso: alterações de dados em meses passados podem alterar ou cancelar a entrada de dados de meses futuros.', 'warning');
             }
-            return;
         }
 
         const modal = document.getElementById('expense-modal');
@@ -229,7 +227,7 @@ const Modals = {
         const paidRow = document.getElementById('expense-paid-row');
         const isTemplateCb = document.getElementById('expense-is-template');
         const specialTypeInput = document.getElementById('expense-special-type');
-        const categorySelect = document.getElementById('expense-category-id');
+
 
         const updateUnplannedVisibility = () => {
             const selectedCatId = categorySelect.value;
@@ -322,7 +320,6 @@ const Modals = {
             }
         }
     },
-
     /**
      * Opens the Income modal
      * @param {Object} income - Income data to edit (optional)
@@ -330,11 +327,10 @@ const Modals = {
     openIncomeModal(income = null) {
         if (this.isPastMonth()) {
             if (typeof showToast === 'function') {
-                showToast('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error', 6000);
+                showToast('Aviso: alterações de dados em meses passados podem alterar ou cancelar a entrada de dados de meses futuros.', 'warning', 6000);
             } else if (window.api && window.api.showMessage) {
-                window.api.showMessage('A edição não é permitida em meses passados para preservar o histórico financeiro.', 'error');
+                window.api.showMessage('Aviso: alterações de dados em meses passados podem alterar ou cancelar a entrada de dados de meses futuros.', 'warning');
             }
-            return;
         }
 
         if (income && income.isUnplanned) {
@@ -482,7 +478,7 @@ const Modals = {
         // Future check: selectedDate > todayDate
         const isFuture = selectedDate > todayDate;
         const isPast = this.isPastMonth();
-        const isReadOnly = isFuture || isPast;
+        const isReadOnly = isFuture;
 
         modal.dataset.day = day;
 
@@ -494,7 +490,7 @@ const Modals = {
         }
 
         if (isReadOnly) {
-            let reasonStr = isFuture ? 'Data Futura' : 'Mês Passado';
+            let reasonStr = 'Data Futura';
             title.textContent = `Detalhamento (Somente Leitura - ${reasonStr})`;
             modal.classList.add('read-only-mode');
             saveBtn.style.display = 'none';
@@ -502,18 +498,26 @@ const Modals = {
             // Add warning
             const warning = document.createElement('div');
             warning.id = 'daily-income-warning';
-            warning.className = isPast ? 'alert alert-warning' : 'alert alert-danger';
+            warning.className = 'alert alert-danger';
             warning.style.marginBottom = '10px';
             warning.style.textAlign = 'center';
-            warning.textContent = isPast 
-                ? 'A edição de dados de meses passados é bloqueada para preservar o histórico financeiro.' 
-                : 'Não é possível inserir valores efetivos em datas futuras.';
+            warning.textContent = 'Não é possível inserir valores efetivos em datas futuras.';
 
             const modalBody = modal.querySelector('.modal-body') || modal.querySelector('.modal-content');
             const header = modal.querySelector('.modal-header');
             if (header) header.after(warning);
         } else {
             title.textContent = `Detalhamento da Receita do Dia ${day}/${DataStore.currentMonth.month}`;
+            if (isPast) {
+                const warning = document.createElement('div');
+                warning.id = 'daily-income-warning';
+                warning.className = 'alert alert-warning';
+                warning.style.marginBottom = '10px';
+                warning.style.textAlign = 'center';
+                warning.textContent = 'Aviso: alterações de dados em meses passados podem alterar ou cancelar a entrada de dados de meses futuros.';
+                const header = modal.querySelector('.modal-header');
+                if (header) header.after(warning);
+            }
         }
 
         const allMonthIncomes = [...(DataStore.currentMonth.incomes || [])];
@@ -671,10 +675,10 @@ const Modals = {
             const selectedDate = new Date(year, month - 1, parseInt(day));
             const isFuture = selectedDate > todayDate;
             const isPast = this.isPastMonth();
-            const isReadOnly = isFuture || isPast;
+            const isReadOnly = isFuture;
 
             modal.dataset.day = day;
-            let reasonStr = isFuture ? 'Futuro' : 'Mês Passado';
+            let reasonStr = 'Futuro';
             title.textContent = isReadOnly
                 ? `Detalhamento da Despesa (Somente Leitura - ${reasonStr})` 
                 : `Detalhamento da Despesa do Dia ${day}/${String(month).padStart(2, '0')}`;
@@ -685,16 +689,28 @@ const Modals = {
             if (isReadOnly) {
                 // Add warning
                 const warning = document.createElement('div');
-                warning.className = isPast ? 'alert alert-warning' : 'alert alert-danger';
+                warning.className = 'alert alert-danger';
                 warning.style.marginBottom = '10px';
                 warning.style.textAlign = 'center';
-                warning.textContent = isPast 
-                    ? 'A edição de dados de meses passados é bloqueada para preservar o histórico financeiro.' 
-                    : 'Não é possível inserir valores efetivos em datas futuras.';
+                warning.textContent = 'Não é possível inserir valores efetivos em datas futuras.';
+                container.appendChild(warning);
+            } else if (isPast) {
+                // Add warning
+                const warning = document.createElement('div');
+                warning.className = 'alert alert-warning';
+                warning.style.marginBottom = '10px';
+                warning.style.textAlign = 'center';
+                warning.textContent = 'Aviso: alterações de dados em meses passados podem alterar ou cancelar a entrada de dados de meses futuros.';
                 container.appendChild(warning);
             }
 
-            const categories = [...DataStore.categories].sort((a, b) => a.order - b.order);
+            const currentMonthId = DataStore.currentMonth?.id;
+            const categories = [...DataStore.categories]
+                .filter(cat => {
+                    if (!cat.hiddenFrom) return true;
+                    return currentMonthId < cat.hiddenFrom;
+                })
+                .sort((a, b) => a.order - b.order);
             const expensesByDay = DataStore.getExpensesByDay();
             const allMonthExpenses = DataStore.currentMonth.expenses || [];
             
@@ -884,6 +900,37 @@ const Modals = {
         this.open('copy-month-modal');
     },
 
+    async promptPastDelete(type) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('past-delete-prompt-modal');
+            const editDescBtn = document.getElementById('past-prompt-edit-desc');
+            const editCatBtn = document.getElementById('past-prompt-edit-cat');
+            const deleteBtn = document.getElementById('past-prompt-delete');
+            const cancelBtn = modal.querySelector('[data-dismiss="modal"]');
+
+            if (type === 'category' || type === 'income') {
+                editCatBtn.style.display = 'none';
+            } else {
+                editCatBtn.style.display = 'block';
+            }
+
+            const cleanup = () => {
+                editDescBtn.onclick = null;
+                editCatBtn.onclick = null;
+                deleteBtn.onclick = null;
+                cancelBtn.onclick = null;
+                modal.classList.remove('show');
+            };
+
+            editDescBtn.onclick = () => { cleanup(); resolve('edit_desc'); };
+            editCatBtn.onclick = () => { cleanup(); resolve('edit_cat'); };
+            deleteBtn.onclick = () => { cleanup(); resolve('delete'); };
+            cancelBtn.onclick = () => { cleanup(); resolve('cancel'); };
+
+            modal.classList.add('show');
+        });
+    },
+
     /**
      * Initializes modal event handlers
      */
@@ -923,9 +970,25 @@ const Modals = {
             }
 
             if (categoryId) {
+                const exists = DataStore.categories.some(c => c.id !== categoryId && c.name.toLowerCase() === name.toLowerCase() && !c.hiddenFrom);
+                if (exists) {
+                    if (typeof showToast === 'function') showToast('Já existe uma outra categoria com este nome.', 'error');
+                    return;
+                }
+
+                if (this.isPastMonth()) {
+                    if (!await window.api.showConfirm('Você está alterando uma categoria em um mês passado. Isso afetará os meses futuros (Efeito Cascata).\n\nTem certeza que deseja salvar esta alteração?')) {
+                        return;
+                    }
+                }
                 await DataStore.updateCategory(categoryId, { name, color });
                 showToast('Categoria atualizada', 'success');
             } else {
+                const exists = DataStore.categories.some(c => c.name.toLowerCase() === name.toLowerCase() && !c.hiddenFrom);
+                if (exists) {
+                    if (typeof showToast === 'function') showToast('Já existe uma categoria com este nome.', 'error');
+                    return;
+                }
                 await DataStore.addCategory({ name, color });
                 showToast('Categoria criada', 'success');
             }
@@ -1038,13 +1101,31 @@ const Modals = {
         // Delete expense button
         document.getElementById('delete-expense-btn').addEventListener('click', async () => {
             const expenseId = document.getElementById('expense-id').value;
-            if (expenseId && await window.api.showConfirm('Tem certeza que deseja excluir esta despesa?')) {
-                await DataStore.deleteExpense(expenseId);
-                showToast('Despesa excluída', 'success');
-                this.closeAll();
-                Categories.render();
-                App.updateSummary();
+            if (!expenseId) return;
+
+            if (this.isPastMonth()) {
+                const action = await this.promptPastDelete('expense');
+                if (action === 'cancel') return;
+                if (action === 'edit_desc') {
+                    document.getElementById('expense-description').focus();
+                    return;
+                }
+                if (action === 'edit_cat') {
+                    document.getElementById('expense-category-id').focus();
+                    return;
+                }
+                // if 'delete', proceed
+            } else {
+                if (!await window.api.showConfirm('Tem certeza que deseja excluir esta despesa?')) {
+                    return;
+                }
             }
+
+            await DataStore.deleteExpense(expenseId);
+            showToast('Despesa excluída', 'success');
+            this.closeAll();
+            Categories.render();
+            App.updateSummary();
         });
 
         // Income form submission
@@ -1071,6 +1152,29 @@ const Modals = {
                 }
                 const dayPart = match[1];
                 const monthPart = match[2].toLowerCase();
+
+                const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+                const inputMonthInt = monthNames.indexOf(monthPart) + 1;
+                const currentMonthInt = parseInt(DataStore.currentMonth?.month || new Date().getMonth() + 1, 10);
+                
+                let wasFutureReminder = false;
+                const currentIncomeId = document.getElementById('income-id').value;
+                if (currentIncomeId) {
+                    const existing = DataStore.currentMonth.incomes.find(i => i.id === currentIncomeId);
+                    if (existing && existing.isFutureReminder) {
+                        wasFutureReminder = true;
+                    }
+                }
+
+                if (inputMonthInt === currentMonthInt && !wasFutureReminder) {
+                    if (typeof showToast === 'function') {
+                        showToast('O lembrete não pode ser criado para o mês atual. Desmarque a opção "Lembrete" e insira apenas o dia.', 'error');
+                    } else if (window.api && window.api.showMessage) {
+                        window.api.showMessage('O lembrete não pode ser criado para o mês atual. Desmarque a opção "Lembrete" e insira apenas o dia.', 'error');
+                    }
+                    return;
+                }
+
                 plannedDate = dayPart ? `${dayPart}, ${monthPart}` : monthPart;
             } else if (plannedDateInput === 'all') {
                 plannedDate = 'all';
@@ -1205,6 +1309,11 @@ const Modals = {
                     }
                 }
                 
+                if (this.isPastMonth()) {
+                    if (!await window.api.showConfirm('Você está alterando uma receita em um mês passado. Isso afetará os meses futuros (Efeito Cascata).\n\nTem certeza que deseja salvar esta alteração?')) {
+                        return;
+                    }
+                }
                 await DataStore.updateIncome(incomeId, incomeObj);
                 showToast('Receita atualizada', 'success');
             } else {
@@ -1220,13 +1329,27 @@ const Modals = {
         // Delete income button
         document.getElementById('delete-income-btn').addEventListener('click', async () => {
             const incomeId = document.getElementById('income-id').value;
-            if (incomeId && await window.api.showConfirm('Tem certeza que deseja excluir esta receita?')) {
-                await DataStore.deleteIncome(incomeId);
-                showToast('Receita excluída', 'success');
-                this.closeAll();
-                Income.render();
-                App.updateSummary();
+            if (!incomeId) return;
+
+            if (this.isPastMonth()) {
+                const action = await this.promptPastDelete('income');
+                if (action === 'cancel') return;
+                if (action === 'edit_desc') {
+                    document.getElementById('income-description').focus();
+                    return;
+                }
+                // 'edit_cat' is hidden for income, so only 'delete' remains
+            } else {
+                if (!await window.api.showConfirm('Tem certeza que deseja excluir esta receita?')) {
+                    return;
+                }
             }
+
+            await DataStore.deleteIncome(incomeId);
+            showToast('Receita excluída', 'success');
+            this.closeAll();
+            Income.render();
+            App.updateSummary();
         });
 
         // Settings form submission
@@ -1723,7 +1846,8 @@ const Modals = {
 
                 const globalExtras = document.querySelectorAll('#unplanned-new-entries-container .global-extra-expense');
                 if (globalExtras.length > 0) {
-                    let unplannedCat = DataStore.categories.find(c => c.name.toLowerCase() === 'despesas não categorizadas');
+                    const currentMonthId = DataStore.currentMonth?.id;
+                    let unplannedCat = DataStore.categories.find(c => c.name.toLowerCase() === 'despesas não categorizadas' && (!c.hiddenFrom || currentMonthId < c.hiddenFrom));
                     if (!unplannedCat) {
                         unplannedCat = await DataStore.addCategory({ name: 'Despesas Não Categorizadas', color: '#8a2be2' });
                     }
@@ -1856,6 +1980,29 @@ const Modals = {
             }
             const dayPart = match[1];
             const monthPart = match[2].toLowerCase();
+
+            const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+            const inputMonthInt = monthNames.indexOf(monthPart) + 1;
+            const currentMonthInt = parseInt(DataStore.currentMonth?.month || new Date().getMonth() + 1, 10);
+            
+            let wasFutureReminder = false;
+            const currentExpenseId = document.getElementById('expense-id').value;
+            if (currentExpenseId) {
+                const existing = DataStore.currentMonth.expenses.find(e => e.id === currentExpenseId);
+                if (existing && existing.isFutureReminder) {
+                    wasFutureReminder = true;
+                }
+            }
+
+            if (inputMonthInt === currentMonthInt && !wasFutureReminder) {
+                if (typeof showToast === 'function') {
+                    showToast('O lembrete não pode ser criado para o mês atual. Desmarque a opção "Lembrete" e insira apenas o dia.', 'error');
+                } else if (window.api && window.api.showMessage) {
+                    window.api.showMessage('O lembrete não pode ser criado para o mês atual. Desmarque a opção "Lembrete" e insira apenas o dia.', 'error');
+                }
+                return;
+            }
+
             plannedDate = dayPart ? `${dayPart}, ${monthPart}` : monthPart;
         } else if (plannedDateInput.toLowerCase() === 'all' || plannedDateInput.toLowerCase() === 'fds') {
             plannedDate = plannedDateInput.toLowerCase();
@@ -1937,6 +2084,11 @@ const Modals = {
         }
 
         if (id) {
+            if (this.isPastMonth()) {
+                if (!await window.api.showConfirm('Você está alterando uma despesa em um mês passado. Isso afetará os meses futuros (Efeito Cascata).\n\nTem certeza que deseja salvar esta alteração?')) {
+                    return;
+                }
+            }
             await DataStore.updateExpense(id, data);
             showToast('Despesa atualizada', 'success');
         } else {

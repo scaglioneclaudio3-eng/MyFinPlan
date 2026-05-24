@@ -43,10 +43,13 @@ async function initializeAnnualDashboard() {
         let monthExpense = 0;
 
         // Incomes
-        if (monthData.incomes) {
+        if (monthData.dailyActualIncome) {
+            for (const day in monthData.dailyActualIncome) {
+                monthIncome += monthData.dailyActualIncome[day] || 0;
+            }
+        } else if (monthData.incomes) {
             for (const inc of monthData.incomes) {
-                const received = (typeof inc.receivedAmount === 'number') ? inc.receivedAmount : (inc.plannedAmount || 0);
-                monthIncome += received;
+                monthIncome += inc.receivedAmount || 0;
             }
         }
 
@@ -70,9 +73,7 @@ async function initializeAnnualDashboard() {
                     paid = exp.paidAmount || 0;
                 }
 
-                if (paid === 0) {
-                    paid = exp.plannedAmount || 0; // fallback to planned if not paid yet
-                }
+                // No fallback to planned amount. Only use actual paid amount.
 
                 monthExpense += paid;
 

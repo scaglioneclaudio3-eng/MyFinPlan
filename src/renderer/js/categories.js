@@ -267,7 +267,6 @@ const Categories = {
         const futureTotalHtml = futureTotal > 0
             ? `<span class="category-future-total" style="color: #87ceeb; font-size: 0.9em; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; padding-right: 15px;">
                  <div style="display: flex; justify-content: flex-end; width: 100%;">
-                     <span style="margin-right: 8px; font-weight: normal;">futuro:</span>
                      <span style="display: inline-block; width: 85px; text-align: right; font-weight: bold;">${formatCurrency(futureTotal)}</span>
                  </div>
                </span>`
@@ -483,22 +482,7 @@ const Categories = {
             return;
         }
 
-        // Check if we are trying to delete from a past month
-        const now = new Date();
-        const currentY = now.getFullYear();
-        const currentM = now.getMonth() + 1;
-        const targetY = parseInt(DataStore.currentMonth?.year || currentY);
-        const targetM = parseInt(DataStore.currentMonth?.month || currentM);
-        const isPast = (targetY < currentY) || (targetY === currentY && targetM < currentM);
 
-        if (isPast) {
-            if (typeof showToast === 'function') {
-                showToast('A deleção de categorias não pode ser realizada em meses passados para preservar o histórico financeiro.', 'error', 6000);
-            } else if (window.api && window.api.showMessage) {
-                window.api.showMessage('A deleção de categorias não pode ser realizada em meses passados para preservar o histórico financeiro.', 'error');
-            }
-            return;
-        }
 
         // Check for effective daily expenses across the entire month
         let hasEffectiveExpenses = false;
@@ -536,13 +520,28 @@ const Categories = {
             }
         }
 
-        const expenseCount = DataStore.currentMonth?.expenses.filter(e => e.categoryId === category.id).length || 0;
+        let proceedWithDelete = false;
 
-        const message = expenseCount > 0
-            ? `Tem certeza que deseja excluir a categoria "${category.name}"?\nEsta categoria será deletada somente do mês acessado em diante e não aparecerá nos meses futuros.\n\nAtenção: ${expenseCount} despesa(s) planejada(s) vinculada(s) a ela será(ão) CANCELADA(S) e removida(s).`
-            : `Tem certeza que deseja excluir a categoria "${category.name}"?\nEsta categoria será deletada somente do mês acessado em diante e não aparecerá nos meses futuros.`;
+        if (Modals.isPastMonth()) {
+            const action = await Modals.promptPastDelete('category');
+            if (action === 'cancel') return;
+            if (action === 'edit_desc') {
+                Modals.openCategoryModal(category);
+                document.getElementById('category-name').focus();
+                return;
+            }
+            if (action === 'delete') {
+                proceedWithDelete = true;
+            }
+        } else {
+            const expenseCount = DataStore.currentMonth?.expenses.filter(e => e.categoryId === category.id).length || 0;
+            const message = expenseCount > 0
+                ? `Tem certeza que deseja excluir a categoria "${category.name}"?\nEsta categoria será deletada somente do mês acessado em diante e não aparecerá nos meses futuros.\n\nAtenção: ${expenseCount} despesa(s) planejada(s) vinculada(s) a ela será(ão) CANCELADA(S) e removida(s).`
+                : `Tem certeza que deseja excluir a categoria "${category.name}"?\nEsta categoria será deletada somente do mês acessado em diante e não aparecerá nos meses futuros.`;
+            proceedWithDelete = await window.api.showConfirm(message);
+        }
 
-        if (await window.api.showConfirm(message)) {
+        if (proceedWithDelete) {
             await DataStore.deleteCategory(category.id);
             this.render();
             if (typeof App !== 'undefined' && App.updateSummary) App.updateSummary();

@@ -246,17 +246,83 @@ const DataStore = {
             this.categories[index].hiddenFrom = this.currentMonth.id;
         }
 
+        let currentChanged = false;
+
         // Cancel (delete) planned expenses associated with the deleted category
         if (this.currentMonth && this.currentMonth.expenses) {
             const initialLength = this.currentMonth.expenses.length;
             this.currentMonth.expenses = this.currentMonth.expenses.filter(e => e.categoryId !== id);
-            
-            if (this.currentMonth.expenses.length !== initialLength) {
-                await this.saveMonth();
+            if (this.currentMonth.expenses.length !== initialLength) currentChanged = true;
+        }
+
+        // Cancel daily actual expenses in current month
+        if (this.currentMonth && this.currentMonth.dailyActualExpenseDetails) {
+            for (const day in this.currentMonth.dailyActualExpenseDetails) {
+                if (this.currentMonth.dailyActualExpenseDetails[day][id]) {
+                    delete this.currentMonth.dailyActualExpenseDetails[day][id];
+                    let newTotalDaySum = 0;
+                    for (const cat of Object.values(this.currentMonth.dailyActualExpenseDetails[day])) {
+                        for (const item of cat) {
+                            newTotalDaySum += (item.amount || 0);
+                        }
+                    }
+                    if (!this.currentMonth.dailyActualExpense) this.currentMonth.dailyActualExpense = {};
+                    this.currentMonth.dailyActualExpense[day] = newTotalDaySum;
+                    currentChanged = true;
+                }
+            }
+        }
+
+        if (currentChanged) {
+            await this.saveMonth();
+        }
+
+        // Cascade to future months
+        const futureMonths = await this.getFutureMonths(this.currentMonth.id);
+        for (const monthId of futureMonths) {
+            const data = await window.api.readFile(`months/${monthId}.json`);
+            if (!data) continue;
+            let changed = false;
+
+            if (data.expenses) {
+                const initLen = data.expenses.length;
+                data.expenses = data.expenses.filter(e => e.categoryId !== id);
+                if (data.expenses.length !== initLen) changed = true;
+            }
+
+            if (data.dailyActualExpenseDetails) {
+                for (const day in data.dailyActualExpenseDetails) {
+                    if (data.dailyActualExpenseDetails[day][id]) {
+                        delete data.dailyActualExpenseDetails[day][id];
+                        let newTotalDaySum = 0;
+                        for (const cat of Object.values(data.dailyActualExpenseDetails[day])) {
+                            for (const item of cat) {
+                                newTotalDaySum += (item.amount || 0);
+                            }
+                        }
+                        if (!data.dailyActualExpense) data.dailyActualExpense = {};
+                        data.dailyActualExpense[day] = newTotalDaySum;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed) {
+                await window.api.writeFile(`months/${monthId}.json`, data);
             }
         }
 
         await this.saveCategories();
+    },
+
+    /**
+     * Gets a list of all future month IDs (greater than currentMonthId)
+     * @param {string} currentMonthId
+     * @returns {Promise<string[]>}
+     */
+    async getFutureMonths(currentMonthId) {
+        const months = await window.api.listMonthFiles();
+        return months.filter(m => m > currentMonthId).sort();
     },
 
     /**
@@ -447,7 +513,37 @@ const DataStore = {
             }
         }
 
-        if (isNewMonth || copiedCount > 0 || copiedIncomeCount > 0) {
+        let cleanedOrphans = false;
+        if (this.currentMonth.dailyActualExpenseDetails) {
+            const hiddenCategoryIds = this.categories
+                .filter(c => c.hiddenFrom && this.currentMonth.id >= c.hiddenFrom)
+                .map(c => c.id);
+
+            for (const day in this.currentMonth.dailyActualExpenseDetails) {
+                const dayDetails = this.currentMonth.dailyActualExpenseDetails[day];
+                let dayChanged = false;
+                for (const hiddenId of hiddenCategoryIds) {
+                    if (dayDetails[hiddenId]) {
+                        delete dayDetails[hiddenId];
+                        dayChanged = true;
+                        cleanedOrphans = true;
+                    }
+                }
+                
+                if (dayChanged) {
+                    let newTotalDaySum = 0;
+                    for (const cat of Object.values(dayDetails)) {
+                        for (const item of cat) {
+                            newTotalDaySum += (item.amount || 0);
+                        }
+                    }
+                    if (!this.currentMonth.dailyActualExpense) this.currentMonth.dailyActualExpense = {};
+                    this.currentMonth.dailyActualExpense[day] = newTotalDaySum;
+                }
+            }
+        }
+
+        if (isNewMonth || copiedCount > 0 || copiedIncomeCount > 0 || cleanedOrphans) {
             await this.saveMonth();
         }
 
@@ -537,6 +633,55 @@ const DataStore = {
             }
 
             await this.saveMonth();
+
+            // Cascade to future months
+            const futureMonths = await this.getFutureMonths(this.currentMonth.id);
+            const lowerDesc = oldExpense.description.trim().toLowerCase();
+            
+            for (const monthId of futureMonths) {
+                const data = await window.api.readFile(`months/${monthId}.json`);
+                if (!data) continue;
+                let changed = false;
+
+                if (data.expenses) {
+                    for (let i = 0; i < data.expenses.length; i++) {
+                        const e = data.expenses[i];
+                        if (e.categoryId === oldCategoryId && e.description.trim().toLowerCase() === lowerDesc) {
+                            data.expenses[i] = {
+                                ...e,
+                                ...updates,
+                                id: e.id, // preserve future month's unique ID for the expense
+                                paidAmount: e.paidAmount, // preserve future month's actual payments
+                                paidDate: e.paidDate      // preserve future month's actual payment dates
+                            };
+                            
+                            // Migrate payments if category changed
+                            if (newCategoryId && oldCategoryId !== newCategoryId) {
+                                if (data.dailyActualExpenseDetails) {
+                                    for (const day in data.dailyActualExpenseDetails) {
+                                        const dayDetails = data.dailyActualExpenseDetails[day];
+                                        if (dayDetails[oldCategoryId]) {
+                                            const paymentsToMove = dayDetails[oldCategoryId].filter(p => p.expenseId === e.id);
+                                            if (paymentsToMove.length > 0) {
+                                                dayDetails[oldCategoryId] = dayDetails[oldCategoryId].filter(p => p.expenseId !== e.id);
+                                                if (!dayDetails[newCategoryId]) dayDetails[newCategoryId] = [];
+                                                dayDetails[newCategoryId].push(...paymentsToMove);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            changed = true;
+                        }
+                    }
+                }
+
+                if (changed) {
+                    await window.api.writeFile(`months/${monthId}.json`, data);
+                }
+            }
+
             return this.currentMonth.expenses[index];
         }
         return null;
@@ -547,6 +692,10 @@ const DataStore = {
      * @param {string} id - Expense ID
      */
     async deleteExpense(id) {
+        const expenseToDelete = this.currentMonth.expenses.find(e => e.id === id);
+        if (!expenseToDelete) return;
+        const { categoryId, description } = expenseToDelete;
+
         this.currentMonth.expenses = this.currentMonth.expenses.filter(e => e.id !== id);
         
         if (this.currentMonth.dailyActualExpenseDetails) {
@@ -576,6 +725,59 @@ const DataStore = {
         }
 
         await this.saveMonth();
+
+        // Cascade to future months
+        const futureMonths = await this.getFutureMonths(this.currentMonth.id);
+        const lowerDesc = description.trim().toLowerCase();
+        
+        for (const monthId of futureMonths) {
+            const data = await window.api.readFile(`months/${monthId}.json`);
+            if (!data) continue;
+            let changed = false;
+
+            // Find all matching expense IDs in the future month
+            let matchingIds = [];
+            if (data.expenses) {
+                const initLen = data.expenses.length;
+                data.expenses = data.expenses.filter(e => {
+                    if (e.categoryId === categoryId && e.description.trim().toLowerCase() === lowerDesc) {
+                        matchingIds.push(e.id);
+                        return false; // remove it
+                    }
+                    return true;
+                });
+                if (data.expenses.length !== initLen) changed = true;
+            }
+
+            if (data.dailyActualExpenseDetails && matchingIds.length > 0) {
+                for (const day in data.dailyActualExpenseDetails) {
+                    const detailsByCat = data.dailyActualExpenseDetails[day];
+                    let dayChanged = false;
+                    for (const catId in detailsByCat) {
+                        const originalLength = detailsByCat[catId].length;
+                        detailsByCat[catId] = detailsByCat[catId].filter(item => !matchingIds.includes(item.expenseId));
+                        if (detailsByCat[catId].length < originalLength) {
+                            dayChanged = true;
+                        }
+                    }
+                    if (dayChanged) {
+                        let newTotalDaySum = 0;
+                        for (const cat of Object.values(detailsByCat)) {
+                            for (const item of cat) {
+                                newTotalDaySum += (item.amount || 0);
+                            }
+                        }
+                        if (!data.dailyActualExpense) data.dailyActualExpense = {};
+                        data.dailyActualExpense[day] = newTotalDaySum;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed) {
+                await window.api.writeFile(`months/${monthId}.json`, data);
+            }
+        }
     },
 
     /**
@@ -590,7 +792,9 @@ const DataStore = {
             plannedDate: income.plannedDate,
             receivedAmount: income.receivedAmount || null,
             receivedDate: income.receivedDate || null,
-            isUnplanned: income.isUnplanned || false
+            isUnplanned: income.isUnplanned || false,
+            isTemplate: income.isTemplate || false,
+            isFutureReminder: income.isFutureReminder || false
         };
         this.currentMonth.incomes.push(newIncome);
         await this.saveMonth();
@@ -605,11 +809,43 @@ const DataStore = {
     async updateIncome(id, updates) {
         const index = this.currentMonth.incomes.findIndex(i => i.id === id);
         if (index !== -1) {
+            const oldIncome = this.currentMonth.incomes[index];
             this.currentMonth.incomes[index] = {
-                ...this.currentMonth.incomes[index],
+                ...oldIncome,
                 ...updates
             };
             await this.saveMonth();
+
+            // Cascade to future months
+            const futureMonths = await this.getFutureMonths(this.currentMonth.id);
+            const lowerDesc = oldIncome.description.trim().toLowerCase();
+            
+            for (const monthId of futureMonths) {
+                const data = await window.api.readFile(`months/${monthId}.json`);
+                if (!data) continue;
+                let changed = false;
+
+                if (data.incomes) {
+                    for (let i = 0; i < data.incomes.length; i++) {
+                        const inc = data.incomes[i];
+                        if (inc.description.trim().toLowerCase() === lowerDesc) {
+                            data.incomes[i] = {
+                                ...inc,
+                                ...updates,
+                                id: inc.id,
+                                receivedAmount: inc.receivedAmount,
+                                receivedDate: inc.receivedDate
+                            };
+                            changed = true;
+                        }
+                    }
+                }
+
+                if (changed) {
+                    await window.api.writeFile(`months/${monthId}.json`, data);
+                }
+            }
+
             return this.currentMonth.incomes[index];
         }
         return null;
@@ -620,6 +856,10 @@ const DataStore = {
      * @param {string} id - Income ID
      */
     async deleteIncome(id) {
+        const incomeToDelete = this.currentMonth.incomes.find(i => i.id === id);
+        if (!incomeToDelete) return;
+        const { description } = incomeToDelete;
+
         this.currentMonth.incomes = this.currentMonth.incomes.filter(i => i.id !== id);
 
         if (this.currentMonth.dailyActualIncomeDetails) {
@@ -641,6 +881,50 @@ const DataStore = {
         }
 
         await this.saveMonth();
+
+        // Cascade to future months
+        const futureMonths = await this.getFutureMonths(this.currentMonth.id);
+        const lowerDesc = description.trim().toLowerCase();
+        
+        for (const monthId of futureMonths) {
+            const data = await window.api.readFile(`months/${monthId}.json`);
+            if (!data) continue;
+            let changed = false;
+
+            let matchingIds = [];
+            if (data.incomes) {
+                const initLen = data.incomes.length;
+                data.incomes = data.incomes.filter(inc => {
+                    if (inc.description.trim().toLowerCase() === lowerDesc) {
+                        matchingIds.push(inc.id);
+                        return false;
+                    }
+                    return true;
+                });
+                if (data.incomes.length !== initLen) changed = true;
+            }
+
+            if (data.dailyActualIncomeDetails && matchingIds.length > 0) {
+                for (const day in data.dailyActualIncomeDetails) {
+                    const detailsArr = data.dailyActualIncomeDetails[day];
+                    const originalLength = detailsArr.length;
+                    data.dailyActualIncomeDetails[day] = detailsArr.filter(item => !matchingIds.includes(item.incomeId));
+                    if (data.dailyActualIncomeDetails[day].length < originalLength) {
+                        let newTotalDaySum = 0;
+                        for (const item of data.dailyActualIncomeDetails[day]) {
+                            newTotalDaySum += (item.amount || 0);
+                        }
+                        if (!data.dailyActualIncome) data.dailyActualIncome = {};
+                        data.dailyActualIncome[day] = newTotalDaySum;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed) {
+                await window.api.writeFile(`months/${monthId}.json`, data);
+            }
+        }
     },
 
     /**
@@ -873,7 +1157,7 @@ const DataStore = {
 
         // Calculate differences for Juros/Multa, Pago a Maior, Excedente ao Planejado
         totals.accumulatedFines = 0;
-        totals.overpaid = 0;
+
         totals.exceedsPlanned = 0;
         
         const detailsObj = this.currentMonth.dailyActualExpenseDetails || {};

@@ -932,6 +932,81 @@ const Modals = {
     },
 
     /**
+     * Opens the Delete Category modal with migration options
+     * @param {Object} category - The category to delete
+     */
+    openDeleteCategoryModal(category) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('delete-category-modal');
+            const nameDisplay = document.getElementById('delete-category-name-display');
+            const selectTarget = document.getElementById('delete-category-migrate-select');
+            const migrateBtn = document.getElementById('delete-category-migrate-btn');
+            const permanentBtn = document.getElementById('delete-category-permanent-btn');
+            const cancelBtn = modal.querySelector('[data-dismiss="modal"]');
+
+            // Populate category name
+            nameDisplay.textContent = category.name;
+
+            // Populate select box
+            selectTarget.innerHTML = '';
+            const currentMonthId = DataStore.currentMonth?.id;
+            const availableCategories = DataStore.categories.filter(cat => {
+                // Filter out the one being deleted
+                if (cat.id === category.id) return false;
+                // Filter out Unplanned
+                if (cat.name.toLowerCase() === 'despesas não categorizadas') return false;
+                // Filter out hidden
+                if (cat.hiddenFrom && currentMonthId >= cat.hiddenFrom) return false;
+                return true;
+            });
+
+            if (availableCategories.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Nenhuma outra categoria disponível';
+                selectTarget.appendChild(option);
+                selectTarget.disabled = true;
+                migrateBtn.disabled = true;
+            } else {
+                selectTarget.disabled = false;
+                migrateBtn.disabled = false;
+                for (const cat of availableCategories) {
+                    const option = document.createElement('option');
+                    option.value = cat.id;
+                    option.textContent = cat.name;
+                    selectTarget.appendChild(option);
+                }
+            }
+
+            const cleanup = () => {
+                migrateBtn.onclick = null;
+                permanentBtn.onclick = null;
+                cancelBtn.onclick = null;
+                modal.classList.remove('show');
+            };
+
+            migrateBtn.onclick = () => { 
+                const targetId = selectTarget.value;
+                if (!targetId) return; // Should not happen if disabled
+                cleanup(); 
+                resolve({ action: 'migrate', targetId }); 
+            };
+            
+            permanentBtn.onclick = () => { 
+                cleanup(); 
+                resolve({ action: 'delete' }); 
+            };
+            
+            cancelBtn.onclick = () => { 
+                cleanup(); 
+                resolve({ action: 'cancel' }); 
+            };
+
+            modal.classList.add('show');
+        });
+    },
+
+    /**
      * Initializes modal event handlers
      */
     init() {
@@ -1052,8 +1127,8 @@ const Modals = {
             const isUnplanned = cat && cat.name.toLowerCase() === 'despesas não categorizadas';
             
             const isWorkerExpense = ['SALARY_ADVANCE', 'INSS', 'FGTS', 'FIFTH_WORKING_DAY', 'VALE_TRANSPORTE', 'VALE_ALIMENTACAO', 'CESTA_BASICA'].includes(specialType);
-            const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
-            const isStandardDate = plannedDate === 15 || plannedDate === daysInMonth || plannedDate === 'all' || plannedDate === 'fds';
+            const fifthWD = getFifthWorkingDay(DataStore.currentMonth.year, DataStore.currentMonth.month, DataStore.holidays || []);
+            const isStandardDate = plannedDate === 15 || plannedDate === 20 || plannedDate === 30 || plannedDate === fifthWD || plannedDate === 'all' || plannedDate === 'fds';
 
             if (!isUnplanned && isWorkerExpense && !isStandardDate) {
                 // Store form data temporarily to use after choice
@@ -1081,6 +1156,15 @@ const Modals = {
             }
         });
 
+        document.getElementById('worker-choice-5wd').addEventListener('click', async () => {
+            if (this.pendingExpense) {
+                const fifthWD = getFifthWorkingDay(DataStore.currentMonth.year, DataStore.currentMonth.month, DataStore.holidays || []);
+                this.pendingExpense.plannedDate = fifthWD;
+                this.pendingExpense.userDateOverride = false;
+                await this.finalizePendingExpense();
+            }
+        });
+
         document.getElementById('worker-choice-15').addEventListener('click', async () => {
             if (this.pendingExpense) {
                 this.pendingExpense.plannedDate = 15;
@@ -1089,10 +1173,17 @@ const Modals = {
             }
         });
 
-        document.getElementById('worker-choice-last').addEventListener('click', async () => {
+        document.getElementById('worker-choice-20').addEventListener('click', async () => {
             if (this.pendingExpense) {
-                const daysInMonth = getDaysInMonth(DataStore.currentMonth.year, DataStore.currentMonth.month);
-                this.pendingExpense.plannedDate = daysInMonth;
+                this.pendingExpense.plannedDate = 20;
+                this.pendingExpense.userDateOverride = false;
+                await this.finalizePendingExpense();
+            }
+        });
+
+        document.getElementById('worker-choice-30').addEventListener('click', async () => {
+            if (this.pendingExpense) {
+                this.pendingExpense.plannedDate = 30;
                 this.pendingExpense.userDateOverride = false;
                 await this.finalizePendingExpense();
             }
@@ -1825,16 +1916,12 @@ const Modals = {
                         }
 
                         if (hasAmount && hasDesc) {
-                            const newExp = await DataStore.addExpense({
-                                categoryId: catId,
-                                description: desc,
-                                plannedAmount: 0,
-                                plannedDate: day,
-                                paidAmount: amount,
-                                paidDate: day,
-                                isTemplate: false
+                            catItems.push({ 
+                                isExtra: true, 
+                                description: desc, 
+                                amount: amount, 
+                                expenseId: generateId() 
                             });
-                            catItems.push({ expenseId: newExp.id, amount: amount });
                             totalDaySum += amount;
                         }
                     }

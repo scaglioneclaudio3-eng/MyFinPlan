@@ -227,6 +227,14 @@ const App = {
         const totals = DataStore.calculateTotals();
         if (!totals) return;
 
+        // Update chart month displays
+        const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        const monthName = monthNames[this.currentMonth - 1] || '';
+        const monthText = ` - ${monthName} ${this.currentYear}`;
+        document.querySelectorAll('.chart-month-display').forEach(el => {
+            el.textContent = monthText;
+        });
+
         document.getElementById('total-planned-income').textContent = formatCurrency(totals.plannedIncome);
         document.getElementById('total-received-income').textContent = formatCurrency(totals.receivedIncome);
         document.getElementById('total-planned-expenses').textContent = formatCurrency(totals.plannedExpenses);

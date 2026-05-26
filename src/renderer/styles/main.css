@@ -392,12 +392,23 @@ body {
     grid-template-columns: 24px 1fr 130px 170px 80px;
     align-items: center;
     padding: var(--spacing-sm) var(--spacing-md);
-    cursor: pointer;
+    cursor: grab;
     transition: background-color 0.2s;
 }
 
 .category-header:hover {
     background-color: var(--bg-input);
+}
+
+.category-card[draggable="true"] .category-header:active {
+    cursor: grabbing;
+}
+
+.category-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+    box-shadow: var(--shadow-lg);
+    border: 1px dashed var(--primary-color);
 }
 
 .category-color {
@@ -810,4 +821,51 @@ body {
 
 .blink-alert {
     animation: blink-animation 1.5s linear infinite;
+}
+
+/* Print Styles for Charts */
+@media print {
+    /* Hide everything that shouldn't be printed */
+    .app-header, 
+    .view:not(.active),
+    .print-chart-btn,
+    .annual-sidebar,
+    #toast-container {
+        display: none !important;
+    }
+
+    /* Reset layout for printable areas */
+    body, #app, .app-main, .view.active {
+        display: block !important;
+        position: relative !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Ensure chart containers have an explicit height and proper layout for printing */
+    .chart-panel, .annual-chart-container {
+        display: block !important;
+        width: 100% !important;
+        height: 600px !important; /* Explicit height ensures Chart.js can render */
+        border: none !important;
+        box-shadow: none !important;
+        background: white !important;
+        margin: 0 !important;
+        padding: 20px !important;
+        page-break-inside: avoid;
+    }
+
+    /* Reset text colors for print */
+    .chart-panel h3, .annual-chart-container h3, .view.active h3 {
+        color: black !important;
+    }
+
+    /* Ensure canvas takes the given space */
+    canvas {
+        max-width: 100% !important;
+        max-height: 100% !important;
+    }
 }

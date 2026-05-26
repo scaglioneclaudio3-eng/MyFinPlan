@@ -171,19 +171,16 @@
         /* Remove any absolute/fixed positioning */
     }
 
-    /* Ensure Print View is Visible */
-    #print-view {
+    /* Ensure active view is displayed */
+    .view.active {
         display: block !important;
         position: relative !important;
         top: 0 !important;
         left: 0 !important;
     }
 
-    /* Hide other views just in case */
-    #entry-view,
-    #calendar-view,
-    #charts-1-view,
-    #charts-2-view {
+    /* Hide inactive views */
+    .view:not(.active) {
         display: none !important;
     }
 

@@ -261,6 +261,10 @@ const Categories = {
         const card = document.createElement('div');
         card.className = 'category-card';
         card.dataset.categoryId = category.id;
+        
+        if (!isUnplannedCat) {
+            card.setAttribute('draggable', 'true');
+        }
 
         // HTML for Future Total Column (only if > 0 items)
         // Using a distinct class for styling
@@ -345,7 +349,9 @@ const Categories = {
         const today = new Date().getDate();
         const year = DataStore.currentMonth?.year || new Date().getFullYear();
         const month = DataStore.currentMonth?.month || (new Date().getMonth() + 1);
+        const daysInMonth = getDaysInMonth(year, month);
         const holidays = DataStore.holidays || [];
+        const settings = DataStore.settings || {};
 
 
         let html = `
@@ -378,7 +384,32 @@ const Categories = {
 
             // Prefix description for future expenses
             const isFutureReminder = expense.isFutureReminder || expense.plannedDate === 0;
-            const plannedAmountObjStr = (expense.plannedAmount && expense.plannedAmount > 0) ? formatCurrency(expense.plannedAmount) : '-';
+            let rowTotal = expense.plannedAmount || 0;
+            if (expense.plannedDate === 'all' || expense.plannedDate === 'fds') {
+                const satWeight = (settings.saturdayExpensePercentage ?? 100) / 100;
+                const sunWeight = (settings.sundayExpensePercentage ?? 100) / 100;
+                const holidayFactor = (settings.holidayExpensePercentage ?? 100) / 100;
+                let factorSum = 0;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const date = new Date(year, month - 1, d);
+                    const dayOfWeek = date.getDay();
+                    const isHoliday = holidays.includes(dateStr);
+
+                    let factor = expense.plannedDate === 'all' ? 1 : 0;
+                    if (isHoliday) {
+                        factor = holidayFactor;
+                    } else if (dayOfWeek === 6) {
+                        factor = satWeight;
+                    } else if (dayOfWeek === 0) {
+                        factor = sunWeight;
+                    }
+                    factorSum += factor;
+                }
+                rowTotal = rowTotal * factorSum;
+            }
+
+            const plannedAmountObjStr = (rowTotal > 0) ? formatCurrency(rowTotal) : '-';
             let descriptionDisplay = expense.description;
 
             let paidTotalExp = 0;
@@ -425,7 +456,10 @@ const Categories = {
 
             let plannedAmountHtml = '';
             if (!isUnplannedCat && !isFutureReminder) {
-                plannedAmountHtml = `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>`;
+                plannedAmountHtml = `<div style="color: #ffca28; display: flex; flex-direction: column; align-items: flex-end; width: 100%;">
+                    <div style="display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>
+                    ${(expense.plannedDate === 'all' || expense.plannedDate === 'fds') ? `<div style="font-size: 0.85em; color: rgba(255, 202, 40, 0.7); margin-top: -2px;">(${formatCurrency(expense.plannedAmount || 0)} / dia)</div>` : ''}
+                </div>`;
             }
                 
             let paidAmountHtml = '';
@@ -482,71 +516,30 @@ const Categories = {
             return;
         }
 
+        const result = await Modals.openDeleteCategoryModal(category);
 
-
-        // Check for effective daily expenses across the entire month
-        let hasEffectiveExpenses = false;
-        const detailsObj = DataStore.currentMonth?.dailyActualExpenseDetails || {};
-        for (const [day, catGroups] of Object.entries(detailsObj)) {
-            if (catGroups[category.id] && catGroups[category.id].length > 0) {
-                const hasValidItems = catGroups[category.id].some(item => (item.amount || 0) > 0 || item.description);
-                if (hasValidItems) {
-                    hasEffectiveExpenses = true;
-                    break;
-                }
+        if (result.action === 'cancel') {
+            return;
+        } else if (result.action === 'migrate') {
+            await DataStore.deleteAndMigrateCategory(category.id, result.targetId);
+            this.render();
+            if (typeof App !== 'undefined' && App.updateSummary) App.updateSummary();
+            if (typeof showToast === 'function') {
+                showToast('Categoria excluída e dados transferidos com sucesso', 'success');
             }
-        }
-
-        if (hasEffectiveExpenses) {
-            const autoDelete = await window.api.showConfirm(
-                `Existem despesas efetivas (pagas) registradas para a categoria "${category.name}" no mês atual.\n\nDeseja deletar todas as despesas diárias (efetivas) vinculadas a esta categoria automaticamente e, em seguida, excluí-la?`
-            );
-
-            if (!autoDelete) {
-                // User chose not to auto-delete, so we abort
-                return;
-            } else {
-                // Perform auto delete of actual expenses
-                let changed = false;
-                for (const [day, catGroups] of Object.entries(detailsObj)) {
-                    if (catGroups[category.id]) {
-                        delete catGroups[category.id];
-                        changed = true;
-                    }
-                }
-                if (changed) {
-                    await DataStore.saveMonth();
-                }
+        } else if (result.action === 'delete') {
+            // Se estiver em mês passado e o usuário quiser excluir,
+            // talvez você queira manter o aviso extra de exclusão em mês passado
+            if (Modals.isPastMonth()) {
+                const confirmPast = await window.api.showConfirm("Você está em um mês passado. Tem certeza que deseja APAGAR os dados desta categoria permanentemente de hoje em diante?");
+                if (!confirmPast) return;
             }
-        }
 
-        let proceedWithDelete = false;
-
-        if (Modals.isPastMonth()) {
-            const action = await Modals.promptPastDelete('category');
-            if (action === 'cancel') return;
-            if (action === 'edit_desc') {
-                Modals.openCategoryModal(category);
-                document.getElementById('category-name').focus();
-                return;
-            }
-            if (action === 'delete') {
-                proceedWithDelete = true;
-            }
-        } else {
-            const expenseCount = DataStore.currentMonth?.expenses.filter(e => e.categoryId === category.id).length || 0;
-            const message = expenseCount > 0
-                ? `Tem certeza que deseja excluir a categoria "${category.name}"?\nEsta categoria será deletada somente do mês acessado em diante e não aparecerá nos meses futuros.\n\nAtenção: ${expenseCount} despesa(s) planejada(s) vinculada(s) a ela será(ão) CANCELADA(S) e removida(s).`
-                : `Tem certeza que deseja excluir a categoria "${category.name}"?\nEsta categoria será deletada somente do mês acessado em diante e não aparecerá nos meses futuros.`;
-            proceedWithDelete = await window.api.showConfirm(message);
-        }
-
-        if (proceedWithDelete) {
             await DataStore.deleteCategory(category.id);
             this.render();
             if (typeof App !== 'undefined' && App.updateSummary) App.updateSummary();
             if (typeof showToast === 'function') {
-                showToast('Categoria excluída', 'success');
+                showToast('Categoria e seus dados excluídos', 'success');
             }
         }
     },
@@ -589,6 +582,64 @@ const Categories = {
                 Modals.openExpenseModal(null, categoryId);
             }
         });
+
+        // Drag and drop for categories
+        const container = document.getElementById('categories-container');
+        let draggedCard = null;
+
+        container.addEventListener('dragstart', (e) => {
+            const card = e.target.closest('.category-card');
+            if (!card || card.getAttribute('draggable') !== 'true') {
+                e.preventDefault();
+                return;
+            }
+            draggedCard = card;
+            e.dataTransfer.effectAllowed = 'move';
+            // Firefox requires data to be set for drag to work
+            e.dataTransfer.setData('text/plain', card.dataset.categoryId);
+            setTimeout(() => card.classList.add('dragging'), 0);
+        });
+
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(container, e.clientY);
+            const card = document.querySelector('.dragging');
+            if (!card) return;
+            
+            if (afterElement == null) {
+                container.appendChild(card);
+            } else {
+                container.insertBefore(card, afterElement);
+            }
+        });
+
+        container.addEventListener('dragend', async (e) => {
+            const card = e.target.closest('.category-card');
+            if (card) {
+                card.classList.remove('dragging');
+            }
+            draggedCard = null;
+
+            // Gather new order
+            const cards = [...container.querySelectorAll('.category-card')];
+            const orderedIds = cards.map(c => c.dataset.categoryId);
+            
+            await DataStore.updateCategoriesOrder(orderedIds);
+        });
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.category-card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
     }
 };
 

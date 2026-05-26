@@ -162,7 +162,10 @@
             <!-- Charts View 1 -->
             <section id="charts-1-view" class="view">
                 <div class="chart-panel full-screen">
-                    <h3>Despesas por Categoria</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0;">Despesas por Categoria <span class="chart-month-display"></span></h3>
+                        <button class="btn btn-outline print-chart-btn" onclick="window.print()" style="padding: 4px 12px; cursor: pointer;">🖨️ Imprimir</button>
+                    </div>
                     <canvas id="expenses-chart"></canvas>
                 </div>
             </section>
@@ -195,7 +198,10 @@
             <!-- Charts View 2 -->
             <section id="charts-2-view" class="view">
                 <div class="chart-panel full-screen">
-                    <h3>Fluxo de Caixa Acumulado</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0;">Fluxo de Caixa Acumulado <span class="chart-month-display"></span></h3>
+                        <button class="btn btn-outline print-chart-btn" onclick="window.print()" style="padding: 4px 12px; cursor: pointer;">🖨️ Imprimir</button>
+                    </div>
                     <canvas id="cashflow-chart"></canvas>
                 </div>
             </section>
@@ -210,7 +216,10 @@
                         </div>
                     </div>
                     <div class="annual-chart-container" style="flex: 1; background: #ebd8c3; padding: 15px; border-radius: 8px; box-shadow: var(--shadow-sm); color: #000;">
-                        <h3 style="margin-top: 0; color: #000;">Evolução Anual</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0; color: #000;">Evolução Anual <span class="chart-month-display" style="display:none;"></span></h3>
+                            <button class="btn btn-outline print-chart-btn" onclick="window.print()" style="padding: 4px 12px; cursor: pointer; color: #000; border-color: #000;">🖨️ Imprimir</button>
+                        </div>
                         <div style="height: calc(100vh - 180px); width: 100%;">
                             <canvas id="annual-chart"></canvas>
                         </div>
@@ -621,20 +630,31 @@
 
     <!-- Worker Expense Date Choice Modal -->
     <div id="worker-choice-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Ajuste de Data de Despesa Trabalhista</h3>
+        <div class="modal-content modal-lg">
+            <div class="modal-header" style="padding-left: 30px; padding-right: 30px;">
+                <h3 style="line-height: 1.4;">Ajuste de Data de<br>Despesa Trabalhista</h3>
                 <button class="modal-close">&times;</button>
             </div>
-            <div class="modal-body">
-                <p>Você inseriu uma despesa trabalhista em uma data diferente do dia 15 ou último dia do mês.</p>
-                <p>Como deseja proceder?</p>
+            <div class="modal-body" style="padding-left: 30px; padding-right: 30px; padding-top: 20px;">
+                <p style="margin-bottom: 20px; line-height: 1.6; max-width: 90%; margin-left: auto; margin-right: auto; text-align: center;">
+                    As datas sugeridas para despesas trabalhistas são:<br>
+                    o <strong>5º dia útil</strong> do mês, <strong>dia 15</strong>, <strong>dia 20</strong> ou <strong>dia 30</strong>.
+                </p>
+                <div style="background-color: var(--bg-tertiary); padding: 20px 25px; border-radius: 8px; margin: 15px auto; max-width: 95%;">
+                    <p style="font-size: 0.95em; color: #FFFF00; font-weight: bold; margin: 0; line-height: 1.6; text-align: center;">
+                        Obs: Caso a data escolhida recaia em feriados<br>
+                        ou fins de semana (sábados e domingos),<br>
+                        a despesa deve ser paga no dia útil imediatamente anterior.
+                    </p>
+                </div>
+                <p style="margin-top: 25px; margin-bottom: 15px; text-align: center;">Como deseja proceder?</p>
             </div>
-            <div class="form-actions vertical">
-                <button id="worker-choice-keep" class="btn btn-secondary">Manter data inserida (vencimento no dia útil
-                    anterior se feriado/FDS)</button>
+            <div class="form-actions vertical" style="gap: 8px;">
+                <button id="worker-choice-keep" class="btn btn-secondary">Manter data inserida</button>
+                <button id="worker-choice-5wd" class="btn btn-primary">Alterar para o 5º dia útil</button>
                 <button id="worker-choice-15" class="btn btn-primary">Alterar para o dia 15</button>
-                <button id="worker-choice-last" class="btn btn-primary">Alterar para o último dia do mês</button>
+                <button id="worker-choice-20" class="btn btn-primary">Alterar para o dia 20</button>
+                <button id="worker-choice-30" class="btn btn-primary">Alterar para o dia 30</button>
             </div>
         </div>
     </div>
@@ -658,6 +678,36 @@
                         <button id="past-prompt-edit-cat" class="btn btn-primary" style="font-size: 12px; padding: 8px;">Quero adicionar a OUTRA CATEGORIA</button>
                         <button id="past-prompt-delete" class="btn btn-danger" style="margin-top: 10px; font-size: 12px; padding: 8px;">Tenho certeza que quero DELETAR</button>
                         <button class="btn btn-secondary" data-dismiss="modal" style="margin-top: 5px; font-size: 12px; padding: 8px;">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Category Modal -->
+    <div id="delete-category-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Excluir Categoria</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 15px;">
+                <p style="margin-bottom: 15px; font-size: 0.9em; padding: 0 10px;">Você está prestes a excluir a categoria <strong id="delete-category-name-display"></strong>.<br>O que você deseja fazer com as despesas, lembretes e históricos associados a ela?</p>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                    <div style="display: flex; flex-direction: column; gap: 8px; width: 320px;">
+                        <label for="delete-category-migrate-select" style="font-size: 0.85em; text-align: left; font-weight: bold; margin-bottom: -5px;">Transferir tudo para:</label>
+                        <select id="delete-category-migrate-select" class="form-control">
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                        <button id="delete-category-migrate-btn" class="btn btn-primary" style="font-size: 12px; padding: 8px;">Migrar Dados e Excluir Categoria</button>
+                    </div>
+
+                    <div style="width: 320px; border-top: 1px solid #ccc; margin: 10px 0;"></div>
+
+                    <div style="display: flex; flex-direction: column; gap: 8px; width: 320px;">
+                        <button id="delete-category-permanent-btn" class="btn btn-danger" style="font-size: 12px; padding: 8px;">Excluir Permanentemente (Perder Dados)</button>
+                        <button class="btn btn-secondary" data-dismiss="modal" style="font-size: 12px; padding: 8px; margin-top: 5px;">Cancelar</button>
                     </div>
                 </div>
             </div>

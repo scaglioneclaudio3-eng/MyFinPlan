@@ -233,6 +233,25 @@ const DataStore = {
     },
 
     /**
+     * Updates the order of categories based on an array of category IDs
+     * @param {Array<string>} orderedIds - Array of category IDs in the desired order
+     */
+    async updateCategoriesOrder(orderedIds) {
+        let changed = false;
+        orderedIds.forEach((id, index) => {
+            const cat = this.categories.find(c => c.id === id);
+            if (cat && cat.order !== index + 1) {
+                cat.order = index + 1;
+                changed = true;
+            }
+        });
+        
+        if (changed) {
+            await this.saveCategories();
+        }
+    },
+
+    /**
      * Deletes a category
      * @param {string} id - Category ID
      */
@@ -260,13 +279,18 @@ const DataStore = {
             for (const day in this.currentMonth.dailyActualExpenseDetails) {
                 if (this.currentMonth.dailyActualExpenseDetails[day][id]) {
                     delete this.currentMonth.dailyActualExpenseDetails[day][id];
-                    let newTotalDaySum = 0;
-                    for (const cat of Object.values(this.currentMonth.dailyActualExpenseDetails[day])) {
-                        for (const item of cat) {
-                            newTotalDaySum += (item.amount || 0);
-                        }
+                }
+                
+                // Always recalculate sum for the day to ensure consistency
+                let newTotalDaySum = 0;
+                for (const cat of Object.values(this.currentMonth.dailyActualExpenseDetails[day])) {
+                    for (const item of cat) {
+                        newTotalDaySum += (item.amount || 0);
                     }
-                    if (!this.currentMonth.dailyActualExpense) this.currentMonth.dailyActualExpense = {};
+                }
+                if (!this.currentMonth.dailyActualExpense) this.currentMonth.dailyActualExpense = {};
+                
+                if (this.currentMonth.dailyActualExpense[day] !== newTotalDaySum) {
                     this.currentMonth.dailyActualExpense[day] = newTotalDaySum;
                     currentChanged = true;
                 }
@@ -294,13 +318,17 @@ const DataStore = {
                 for (const day in data.dailyActualExpenseDetails) {
                     if (data.dailyActualExpenseDetails[day][id]) {
                         delete data.dailyActualExpenseDetails[day][id];
-                        let newTotalDaySum = 0;
-                        for (const cat of Object.values(data.dailyActualExpenseDetails[day])) {
-                            for (const item of cat) {
-                                newTotalDaySum += (item.amount || 0);
-                            }
+                    }
+
+                    // Always recalculate sum
+                    let newTotalDaySum = 0;
+                    for (const cat of Object.values(data.dailyActualExpenseDetails[day])) {
+                        for (const item of cat) {
+                            newTotalDaySum += (item.amount || 0);
                         }
-                        if (!data.dailyActualExpense) data.dailyActualExpense = {};
+                    }
+                    if (!data.dailyActualExpense) data.dailyActualExpense = {};
+                    if (data.dailyActualExpense[day] !== newTotalDaySum) {
                         data.dailyActualExpense[day] = newTotalDaySum;
                         changed = true;
                     }
@@ -314,6 +342,98 @@ const DataStore = {
 
         await this.saveCategories();
     },
+
+    /**
+     * Deletes a category and migrates its expenses (planned and actual) to another category
+     * @param {string} sourceId - The ID of the category being deleted
+     * @param {string} targetId - The ID of the category to migrate data to
+     */
+    async deleteAndMigrateCategory(sourceId, targetId) {
+        if (!this.currentMonth) return;
+
+        // 1. Hide the source category
+        const index = this.categories.findIndex(c => c.id === sourceId);
+        if (index !== -1) {
+            this.categories[index].hiddenFrom = this.currentMonth.id;
+        }
+
+        let currentChanged = false;
+
+        // 2. Migrate planned expenses in the current month
+        if (this.currentMonth && this.currentMonth.expenses) {
+            for (const expense of this.currentMonth.expenses) {
+                if (expense.categoryId === sourceId) {
+                    expense.categoryId = targetId;
+                    currentChanged = true;
+                }
+            }
+        }
+
+        // 3. Migrate daily actual expenses in the current month
+        if (this.currentMonth && this.currentMonth.dailyActualExpenseDetails) {
+            for (const day in this.currentMonth.dailyActualExpenseDetails) {
+                if (this.currentMonth.dailyActualExpenseDetails[day][sourceId]) {
+                    const itemsToMove = this.currentMonth.dailyActualExpenseDetails[day][sourceId];
+                    
+                    if (!this.currentMonth.dailyActualExpenseDetails[day][targetId]) {
+                        this.currentMonth.dailyActualExpenseDetails[day][targetId] = [];
+                    }
+                    
+                    this.currentMonth.dailyActualExpenseDetails[day][targetId].push(...itemsToMove);
+                    delete this.currentMonth.dailyActualExpenseDetails[day][sourceId];
+                    
+                    // The daily total doesn't change since we just moved items between categories,
+                    // but we mark as changed to save the new category structure
+                    currentChanged = true;
+                }
+            }
+        }
+
+        if (currentChanged) {
+            await this.saveMonth();
+        }
+
+        // 4. Cascade migration to future months
+        const futureMonths = await this.getFutureMonths(this.currentMonth.id);
+        for (const monthId of futureMonths) {
+            const data = await window.api.readFile(`months/${monthId}.json`);
+            if (!data) continue;
+            let changed = false;
+
+            if (data.expenses) {
+                for (const expense of data.expenses) {
+                    if (expense.categoryId === sourceId) {
+                        expense.categoryId = targetId;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (data.dailyActualExpenseDetails) {
+                for (const day in data.dailyActualExpenseDetails) {
+                    if (data.dailyActualExpenseDetails[day][sourceId]) {
+                        const itemsToMove = data.dailyActualExpenseDetails[day][sourceId];
+                        
+                        if (!data.dailyActualExpenseDetails[day][targetId]) {
+                            data.dailyActualExpenseDetails[day][targetId] = [];
+                        }
+                        
+                        data.dailyActualExpenseDetails[day][targetId].push(...itemsToMove);
+                        delete data.dailyActualExpenseDetails[day][sourceId];
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed) {
+                await window.api.writeFile(`months/${monthId}.json`, data);
+            }
+        }
+
+        // 5. Save categories
+        await this.saveCategories();
+    },
+
 
     /**
      * Gets a list of all future month IDs (greater than currentMonthId)

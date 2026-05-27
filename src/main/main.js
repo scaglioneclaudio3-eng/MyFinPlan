@@ -84,12 +84,12 @@ function createMenu() {
             submenu: [
                 { label: 'Novo Mês', click: () => mainWindow.webContents.send('menu-new-month') },
                 { type: 'separator' },
-                { label: 'Importar...', click: () => handleImport() },
-                { label: 'Exportar...', click: () => handleExport() },
+                { label: 'Importar...', click: () => mainWindow.webContents.send('menu-import') },
+                { label: 'Exportar...', click: () => mainWindow.webContents.send('menu-export') },
                 { type: 'separator' },
                 { label: 'Backup Agora', click: () => mainWindow.webContents.send('menu-backup') },
                 { type: 'separator' },
-                { label: 'Imprimir', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.print() },
+                { label: 'Imprimir', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.print({ landscape: true, printBackground: true }) },
                 { type: 'separator' },
                 { label: 'Sair', accelerator: 'Alt+F4', role: 'quit' }
             ]
@@ -150,35 +150,8 @@ function showAbout() {
     });
 }
 
-/**
- * Handles file import
- */
-async function handleImport() {
-    const result = await dialog.showOpenDialog(mainWindow, {
-        title: 'Importar Dados',
-        filters: [{ name: 'JSON', extensions: ['json'] }],
-        properties: ['openFile']
-    });
 
-    if (!result.canceled && result.filePaths.length > 0) {
-        mainWindow.webContents.send('import-file', result.filePaths[0]);
-    }
-}
 
-/**
- * Handles file export
- */
-async function handleExport() {
-    const result = await dialog.showSaveDialog(mainWindow, {
-        title: 'Exportar Dados',
-        filters: [{ name: 'JSON', extensions: ['json'] }],
-        defaultPath: `financas-export-${new Date().toISOString().slice(0, 10)}.json`
-    });
-
-    if (!result.canceled && result.filePath) {
-        mainWindow.webContents.send('export-file', result.filePath);
-    }
-}
 
 // ============== IPC Handlers ==============
 
@@ -204,6 +177,31 @@ function setupIpcHandlers() {
             console.error('Error reading file:', error);
             return null;
         }
+    });
+
+    ipcMain.handle('trigger-import-file', async (event, type) => {
+        let openPath = undefined;
+        if (type === 'backup' && backupsPath) {
+            openPath = backupsPath;
+        }
+        
+        const result = await dialog.showOpenDialog(mainWindow, {
+            title: 'Importar Dados',
+            filters: [{ name: 'JSON', extensions: ['json'] }],
+            properties: ['openFile'],
+            defaultPath: openPath
+        });
+
+        if (!result.canceled && result.filePaths.length > 0) {
+            try {
+                const content = await fs.promises.readFile(result.filePaths[0], 'utf-8');
+                return JSON.parse(content);
+            } catch (error) {
+                console.error('Error parsing import file:', error);
+                throw new Error('Falha ao processar o arquivo. Ele não é um JSON válido.');
+            }
+        }
+        return null;
     });
 
     ipcMain.handle('write-file', async (event, filePath, data) => {
@@ -280,6 +278,19 @@ function setupIpcHandlers() {
         });
         if (!result.canceled && result.filePath) {
             await fs.promises.writeFile(result.filePath, JSON.stringify(backupData, null, 2), 'utf8');
+            return true;
+        }
+        return false;
+    });
+
+    ipcMain.handle('create-export-dialog', async (event, exportData) => {
+        const result = await dialog.showSaveDialog(mainWindow, {
+            title: 'Exportar Mês Atual (JSON)',
+            defaultPath: `financas-export-${new Date().toISOString().slice(0, 10)}.json`,
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+        if (!result.canceled && result.filePath) {
+            await fs.promises.writeFile(result.filePath, JSON.stringify(exportData, null, 2), 'utf8');
             return true;
         }
         return false;

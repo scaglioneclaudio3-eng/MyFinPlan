@@ -333,9 +333,19 @@ const App = {
      */
     setupMenuListeners() {
         window.api.onMenuNewMonth(() => {
-            const now = new Date();
-            const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-            this.loadMonth(nextMonth.getFullYear(), nextMonth.getMonth() + 1);
+            let month = parseInt(this.currentMonth) + 1;
+            let year = parseInt(this.currentYear);
+            if (month > 12) {
+                month = 1;
+                year++;
+            }
+            
+            const monthSelect = document.getElementById('month-select');
+            const yearSelect = document.getElementById('year-select');
+            if (monthSelect) monthSelect.value = month;
+            if (yearSelect) yearSelect.value = year;
+
+            this.loadMonth(year, month);
         });
 
         window.api.onMenuCopyMonth(() => {
@@ -351,11 +361,10 @@ const App = {
         });
 
         window.api.onMenuBackup(async () => {
-            const result = await DataStore.createBackup();
-            if (result.success) {
-                showToast('Backup criado com sucesso!', 'success');
+            if (typeof Modals !== 'undefined' && Modals.openBackupModal) {
+                Modals.openBackupModal();
             } else {
-                showToast('Erro ao criar backup: ' + result.error, 'error');
+                showToast('Erro interno: Módulo de modais não carregado.', 'error');
             }
         });
 
@@ -378,31 +387,19 @@ const App = {
             this.showTutorial();
         });
 
-        window.api.onImportFile(async (filePath) => {
-            try {
-                const data = await window.api.readFile(filePath);
-                if (data && data.months) {
-                    // Import logic here
-                    showToast('Dados importados com sucesso!', 'success');
-                    this.loadMonth(this.currentYear, this.currentMonth);
-                }
-            } catch (error) {
-                showToast('Erro ao importar: ' + error.message, 'error');
+        window.api.onMenuImport(() => {
+            if (typeof Modals !== 'undefined' && Modals.openImportModal) {
+                Modals.openImportModal();
+            } else {
+                showToast('Erro interno: Módulo de modais não carregado.', 'error');
             }
         });
 
-        window.api.onExportFile(async (filePath) => {
-            try {
-                const exportData = {
-                    exportedAt: new Date().toISOString(),
-                    settings: DataStore.settings,
-                    categories: DataStore.categories,
-                    currentMonth: DataStore.currentMonth
-                };
-                await window.api.writeFile(filePath, exportData);
-                showToast('Dados exportados com sucesso!', 'success');
-            } catch (error) {
-                showToast('Erro ao exportar: ' + error.message, 'error');
+        window.api.onMenuExport(() => {
+            if (typeof Modals !== 'undefined' && Modals.openExportModal) {
+                Modals.openExportModal();
+            } else {
+                showToast('Erro interno: Módulo de modais não carregado.', 'error');
             }
         });
     },

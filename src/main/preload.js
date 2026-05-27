@@ -42,8 +42,10 @@ contextBridge.exposeInMainWorld('api', {
     onMenuViewCharts: (callback) => ipcRenderer.on('menu-view-charts', callback),
     onMenuViewSummary: (callback) => ipcRenderer.on('menu-view-summary', callback),
     onMenuTutorial: (callback) => ipcRenderer.on('menu-tutorial', callback),
-    onImportFile: (callback) => ipcRenderer.on('import-file', (event, path) => callback(path)),
-    onExportFile: (callback) => ipcRenderer.on('export-file', (event, path) => callback(path)),
+    onMenuImport: (callback) => ipcRenderer.on('menu-import', callback),
+    triggerImportFile: (type) => ipcRenderer.invoke('trigger-import-file', type),
+    onMenuExport: (callback) => ipcRenderer.on('menu-export', callback),
+    createExportDialog: (data) => ipcRenderer.invoke('create-export-dialog', data),
 
     // Remove listeners
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),

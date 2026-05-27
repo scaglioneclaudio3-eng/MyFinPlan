@@ -1539,6 +1539,52 @@ const DataStore = {
         }
 
         return byDay;
+    },
+
+    /**
+     * Restores a full backup
+     * @param {Object} backupData 
+     */
+    async restoreBackup(backupData) {
+        if (!backupData || !backupData.months) throw new Error("Backup inválido");
+        
+        if (backupData.categories) {
+            this.categories = backupData.categories;
+            await this.saveCategories();
+        }
+        
+        if (backupData.settings) {
+            this.settings = backupData.settings;
+            await this.saveSettings();
+        }
+        
+        for (const [monthId, monthData] of Object.entries(backupData.months)) {
+            await window.api.writeFile(`months/${monthId}.json`, monthData);
+        }
+    },
+
+    /**
+     * Restores a single month export
+     * @param {Object} exportData 
+     */
+    async restoreExport(exportData) {
+        if (!exportData || !exportData.currentMonth) throw new Error("Exportação inválida");
+        
+        if (exportData.categories) {
+            this.categories = exportData.categories;
+            await this.saveCategories();
+        }
+
+        if (exportData.settings) {
+            this.settings = exportData.settings;
+            await this.saveSettings();
+        }
+
+        const monthData = exportData.currentMonth;
+        const monthId = monthData.id;
+        await window.api.writeFile(`months/${monthId}.json`, monthData);
+        
+        this.currentMonth = monthData;
     }
 };
 

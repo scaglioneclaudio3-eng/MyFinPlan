@@ -2186,6 +2186,211 @@ const Modals = {
         this.closeAll();
         Categories.render();
         App.updateSummary();
+    },
+
+    /**
+     * Opens the import explanation modal
+     */
+    async openImportModal() {
+        const importHtml = `
+            <div class="tutorial-content" style="padding: 20px;">
+                <h4 style="margin-bottom: 15px; color: #dc3545;">Atenção: A Importação sobrescreverá dados!</h4>
+                <p style="color: #555;">O sistema aceita dois tipos de arquivos gerados por ele próprio:</p>
+                
+                <div class="tutorial-step" style="background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                    <h5 style="color: #4a90d9; margin-bottom: 10px; font-size: 16px;">1. Exportação Manual (Um único mês)</h5>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 8px;"><strong>Como identificar:</strong> Arquivos com nomes como <code>financas-export-DATA.json</code>, localizados na pasta que você escolheu salvar (ex: Documentos, Downloads).</p>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;"><strong>O que faz:</strong> Substitui apenas os dados do mês atual visualizado pelos dados contidos no arquivo.</p>
+                    <button id="btn-import-manual" style="padding: 8px 15px; background: #4a90d9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Importar Exportação Manual</button>
+                </div>
+
+                <div class="tutorial-step" style="background: #fff3f3; border: 1px solid #f5c6cb; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                    <h5 style="color: #dc3545; margin-bottom: 10px; font-size: 16px;">2. Backup Automático (Todos os meses)</h5>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 8px;"><strong>Como identificar:</strong> Arquivos com nomes como <code>backup-DATA.json</code>.</p>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;"><strong>O que faz:</strong> Substitui <strong>TODOS</strong> os seus dados atuais pelo backup selecionado.</p>
+                    <button id="btn-import-backup" style="padding: 8px 15px; background: #dc3545; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Restaurar Backup Automático</button>
+                </div>
+            </div>
+        `;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal show';
+        modal.innerHTML = `
+            <div class="modal-content modal-lg" id="import-modal-bg" style="background: white; border-radius: 8px;">
+                <div class="modal-header" style="border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 0;">
+                    <h3 style="color: #000; margin: 0;">Importar Dados</h3>
+                    <button class="modal-close" style="color: #000; font-size: 24px; border: none; background: none; cursor: pointer;">&times;</button>
+                </div>
+                ${importHtml}
+            </div>
+        `;
+
+        const closeModal = () => modal.remove();
+        modal.querySelector('.modal-close').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        document.body.appendChild(modal);
+
+        const handleImportResult = async (type) => {
+            try {
+                const data = await window.api.triggerImportFile(type);
+                if (!data) return; // Canceled
+
+                // Validate
+                if (data.timestamp && data.months) {
+                    if (!await window.api.showConfirm('Você está prestes a restaurar um BACKUP COMPLETO. Todos os seus dados atuais serão perdidos. Tem certeza?')) return;
+                    await DataStore.restoreBackup(data);
+                    showToast('Backup restaurado com sucesso!', 'success');
+                    closeModal();
+                    setTimeout(() => location.reload(), 1500);
+                } else if (data.exportedAt && data.currentMonth) {
+                    if (!await window.api.showConfirm(`Você está prestes a restaurar dados para o mês ${data.currentMonth.month}/${data.currentMonth.year}. Os dados deste mês serão substituídos. Tem certeza?`)) return;
+                    await DataStore.restoreExport(data);
+                    showToast('Mês importado com sucesso!', 'success');
+                    closeModal();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    await window.api.showMessage('Arquivo inválido. O arquivo selecionado não é um backup ou exportação válida do sistema.', 'error');
+                }
+            } catch (error) {
+                await window.api.showMessage(error.message, 'error');
+            }
+        };
+
+        document.getElementById('btn-import-manual').addEventListener('click', () => handleImportResult('manual'));
+        document.getElementById('btn-import-backup').addEventListener('click', () => handleImportResult('backup'));
+    },
+
+    /**
+     * Opens the export explanation modal
+     */
+    async openExportModal() {
+        const exportHtml = `
+            <div class="tutorial-content" style="padding: 20px;">
+                <h4 style="margin-bottom: 15px; color: #28a745;">Exportação Manual de Mês Único</h4>
+                <p style="color: #555;">Esta ferramenta exporta os dados do mês que você está visualizando agora na tela.</p>
+                
+                <div class="tutorial-step" style="background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                    <h5 style="color: #4a90d9; margin-bottom: 10px; font-size: 16px;">O que será exportado?</h5>
+                    <ul style="font-size: 14px; color: #333; margin-bottom: 8px; padding-left: 20px;">
+                        <li>Todas as <strong>receitas e despesas</strong> do mês atual.</li>
+                        <li>Suas <strong>categorias</strong> personalizadas.</li>
+                        <li>Suas <strong>configurações</strong> gerais.</li>
+                    </ul>
+                    <p style="font-size: 14px; color: #dc3545; margin-bottom: 0;"><strong>Atenção:</strong> Os dados de outros meses NÃO serão incluídos neste arquivo. Se quiser salvar todos os meses de uma vez, use a opção "Backup Agora" no menu principal.</p>
+                </div>
+
+                <div class="tutorial-step" style="background: #e8f4f8; border: 1px solid #b8daff; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                    <h5 style="color: #0056b3; margin-bottom: 10px; font-size: 16px;">Onde devo guardar?</h5>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;">Recomendamos que você crie uma pasta segura, como no seu <strong>Google Drive, OneDrive ou um Pendrive</strong>, para garantir que você não perca esses dados caso o seu computador tenha algum problema.</p>
+                    <button id="btn-export-proceed" style="padding: 10px 20px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: bold; width: 100%;">Escolher Local e Exportar</button>
+                </div>
+            </div>
+        `;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal show';
+        modal.innerHTML = `
+            <div class="modal-content modal-lg" id="export-modal-bg" style="background: white; border-radius: 8px;">
+                <div class="modal-header" style="border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 0;">
+                    <h3 style="color: #000; margin: 0;">Exportar Dados</h3>
+                    <button class="modal-close" style="color: #000; font-size: 24px; border: none; background: none; cursor: pointer;">&times;</button>
+                </div>
+                ${exportHtml}
+            </div>
+        `;
+
+        const closeModal = () => modal.remove();
+        modal.querySelector('.modal-close').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        document.body.appendChild(modal);
+
+        document.getElementById('btn-export-proceed').addEventListener('click', async () => {
+            try {
+                // Collect the export data
+                const exportData = {
+                    exportedAt: new Date().toISOString(),
+                    settings: DataStore.settings,
+                    categories: DataStore.categories,
+                    currentMonth: DataStore.currentMonth
+                };
+                
+                const success = await window.api.createExportDialog(exportData);
+                if (success) {
+                    showToast('Dados exportados com sucesso!', 'success');
+                    closeModal();
+                }
+            } catch (error) {
+                await window.api.showMessage('Erro ao exportar: ' + error.message, 'error');
+            }
+        });
+    },
+
+    /**
+     * Opens the backup explanation modal
+     */
+    async openBackupModal() {
+        const backupHtml = `
+            <div class="tutorial-content" style="padding: 20px;">
+                <h4 style="margin-bottom: 15px; color: #17a2b8;">Criação de Backup Rápido</h4>
+                <p style="color: #555;">Esta ferramenta cria uma cópia de segurança instantânea de <strong>TODO O SEU SISTEMA</strong>.</p>
+                
+                <div class="tutorial-step" style="background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                    <h5 style="color: #4a90d9; margin-bottom: 10px; font-size: 16px;">O que será salvo?</h5>
+                    <ul style="font-size: 14px; color: #333; margin-bottom: 0; padding-left: 20px;">
+                        <li>Todos os dados de <strong>todos os meses</strong> (passados, atuais e futuros).</li>
+                        <li>Todas as suas <strong>categorias</strong> e <strong>configurações</strong>.</li>
+                    </ul>
+                </div>
+
+                <div class="tutorial-step" style="background: #e8f4f8; border: 1px solid #b8daff; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                    <h5 style="color: #0056b3; margin-bottom: 10px; font-size: 16px;">Para onde vai o arquivo?</h5>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;">Para facilitar, o aplicativo salvará esse arquivo automaticamente em uma <strong>pasta escondida no seu computador</strong>. Se algum dia precisar voltar atrás (restaurar), a opção "Arquivo > Importar > Restaurar Backup Automático" saberá exatamente onde procurar!</p>
+                    <p style="font-size: 14px; color: #dc3545; margin-bottom: 12px;"><strong>Aviso:</strong> Se o seu computador pifar, esse arquivo também pode ser perdido. Para salvar um backup em um pendrive ou na nuvem, feche essa janela, vá na engrenagem de <strong>Configurações</strong> e use o botão "Exportar Backup Completo".</p>
+                    <button id="btn-backup-proceed" style="padding: 10px 20px; background: #17a2b8; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: bold; width: 100%;">Criar Backup Agora</button>
+                </div>
+            </div>
+        `;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal show';
+        modal.innerHTML = `
+            <div class="modal-content modal-lg" id="backup-modal-bg" style="background: white; border-radius: 8px;">
+                <div class="modal-header" style="border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 0;">
+                    <h3 style="color: #000; margin: 0;">Fazer Backup</h3>
+                    <button class="modal-close" style="color: #000; font-size: 24px; border: none; background: none; cursor: pointer;">&times;</button>
+                </div>
+                ${backupHtml}
+            </div>
+        `;
+
+        const closeModal = () => modal.remove();
+        modal.querySelector('.modal-close').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        document.body.appendChild(modal);
+
+        document.getElementById('btn-backup-proceed').addEventListener('click', async () => {
+            try {
+                const result = await DataStore.createBackup();
+                if (result && result.success) {
+                    await window.api.showMessage(`Backup criado com sucesso e guardado na pasta segura do sistema: \n\n${result.path}`, 'info');
+                    showToast('Backup criado!', 'success');
+                    closeModal();
+                } else {
+                    await window.api.showMessage('Erro ao criar backup.', 'error');
+                }
+            } catch (error) {
+                await window.api.showMessage('Erro ao criar backup: ' + error.message, 'error');
+            }
+        });
     }
 };
 

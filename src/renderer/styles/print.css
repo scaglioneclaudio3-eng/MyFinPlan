@@ -137,46 +137,85 @@
 
 /* Print Media Query */
 @media print {
+    @page {
+        size: A4 landscape;
+        margin: 4mm; /* Minimum margin for maximum expansion */
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 
     /* Hide non-printable elements */
     .no-print,
     .app-header,
-    .view-tabs,
-    /* If redundant with header */
-    .summary-bar,
-    /* If visible in print flow? No, hidden by layout usually but to be safe */
-    nav,
-    aside,
     button,
     #toast-container {
         display: none !important;
     }
 
-    /* Reset Layout */
+    /* Layout Adjustments and Remove Black Backgrounds */
     html,
     body,
     #app,
-    .app-main,
-    .view {
+    .app-main {
         height: auto !important;
         width: 100% !important;
         overflow: visible !important;
         margin: 0 !important;
         padding: 0 !important;
-        background-color: #c5e1cd !important; /* Verde parede de hospital mais escuro */
-        color: #000 !important;
-        display: block !important;
-        /* Force block layout to fix pagination */
-        position: static !important;
-        /* Remove any absolute/fixed positioning */
+        background-color: transparent !important; /* Remove the black background */
     }
 
-    /* Ensure active view is displayed */
+    /* Ensure active view is displayed without background */
     .view.active {
         display: block !important;
         position: relative !important;
         top: 0 !important;
         left: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+        background-color: transparent !important; /* Remove view background to save ink and look cleaner */
+    }
+
+    /* Expand panels and remove scrollbars so all content prints */
+    .expenses-panel,
+    .income-panel,
+    .daily-expense-panel,
+    .daily-income-panel {
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        page-break-inside: avoid;
+    }
+
+    #categories-container,
+    #income-container,
+    #daily-expense-grid,
+    #daily-income-grid {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        flex: none !important;
+    }
+
+    /* Keep the grid layout but allow rows to expand automatically */
+    .entry-container {
+        display: grid !important;
+        grid-template-rows: auto auto !important;
+        height: auto !important;
+        zoom: 0.55; /* Scaled down even more to fit on one page */
+        gap: 10px;
+        page-break-inside: avoid;
+    }
+
+    /* Ensure summary bar prints on the same page */
+    .summary-bar {
+        zoom: 0.65;
+        page-break-before: avoid !important;
+        page-break-inside: avoid !important;
+        margin-top: 5px !important;
     }
 
     /* Hide inactive views */
@@ -184,7 +223,23 @@
         display: none !important;
     }
 
-    /* Typography adjustments */
+    /* Typography adjustments - prevent text truncation */
+    .category-name,
+    .income-description,
+    .col-description,
+    .expense-table td,
+    .expense-table th {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+    }
+
+    .calendar-grid {
+        zoom: 0.65;
+        page-break-inside: avoid;
+    }
+
+    /* Keep the print-view clean */
     .print-content {
         max-width: 100%;
         margin: 0;
@@ -194,12 +249,10 @@
     .print-table th,
     .print-table td {
         border-color: #000;
-        /* Crisp black lines */
     }
 
     .subtotal-row td {
         background-color: transparent !important;
-        /* No bg in print */
     }
 
     /* Page Breaks */
@@ -213,8 +266,6 @@
         page-break-inside: avoid;
     }
 
-    /* Ensure colors are printed if user enabled background graphics, but relying on borders is safer */
-    /* Remove any scrollbars */
     ::-webkit-scrollbar {
         display: none;
     }

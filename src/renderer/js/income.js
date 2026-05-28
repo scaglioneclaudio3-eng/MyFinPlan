@@ -200,7 +200,7 @@ const Income = {
         const receivedDateHtml = totalReceived > 0 ? `<div style="color: var(--success-color);">[${receivedDatesStr}]</div>` : '';
 
         const plannedHtml = (!income.isUnplanned && !isFuture)
-            ? `<div class="income-planned" style="margin-bottom: 2px;"><span style="font-size: 11px; margin-right: 4px; opacity: 0.9;">Planejada:</span>${formatCurrency(income.plannedAmount)}</div>` 
+            ? `<div class="income-planned" style="margin-bottom: 2px;"><span style="font-size: 11px; margin-right: 4px; opacity: 0.9;">${window.i18n ? window.i18n.t('lbl_planned_fem_lower') : 'Planejada'}:</span>${formatCurrency(income.plannedAmount)}</div>` 
             : `<div style="height: 16.5px; margin-bottom: 2px;"></div>`;
 
         const futureHtml = isFuture
@@ -220,7 +220,7 @@ const Income = {
             </div>
             <div class="income-amounts">
                 ${plannedHtml}
-                ${totalReceived > 0 ? `<div class="income-received"><span style="font-size: 11px; margin-right: 4px; opacity: 0.9;">Efetiva:</span>${formatCurrency(totalReceived)}</div>` : ''}
+                ${totalReceived > 0 ? `<div class="income-received"><span style="font-size: 11px; margin-right: 4px; opacity: 0.9;">${window.i18n ? window.i18n.t('lbl_received_lower') : 'Recebida'}:</span>${formatCurrency(totalReceived)}</div>` : ''}
             </div>
         `;
 

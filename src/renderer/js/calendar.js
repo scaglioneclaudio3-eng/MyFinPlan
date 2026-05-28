@@ -27,7 +27,7 @@ const Calendar = {
         const holidays = DataStore.holidays;
 
         // Render weekday headers
-        const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const weekdays = [window.i18n.t('day_sun') || 'Dom', window.i18n.t('day_mon') || 'Seg', window.i18n.t('day_tue') || 'Ter', window.i18n.t('day_wed') || 'Qua', window.i18n.t('day_thu') || 'Qui', window.i18n.t('day_fri') || 'Sex', window.i18n.t('day_sat') || 'Sáb'];
         for (const day of weekdays) {
             const header = document.createElement('div');
             header.className = 'calendar-weekday';
@@ -116,34 +116,34 @@ const Calendar = {
                 <div style="display: flex; gap: 4px;">
                     ${!isFutureDay ? `
                     <span class="calendar-day-balance ${accEffectiveFlux >= 0 ? 'positive' : 'negative'}" style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1;">
-                        <span style="font-size: 8px; opacity: 0.7; text-transform: uppercase;">Fluxo Acum. Efetivo</span>
+                        <span style="font-size: 8px; opacity: 0.7; text-transform: uppercase;">${window.i18n.t('acc_eff_flux') || 'Fluxo Acum. Efetivo'}</span>
                         <span style="font-size: 11px;">${formatCurrency(accEffectiveFlux)}</span>
                     </span>
                     ` : ''}
                     <span class="calendar-day-balance planned-pink" style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1;">
-                        <span style="font-size: 8px; opacity: 0.7; text-transform: uppercase;">Fluxo Acum. Planejado</span>
+                        <span style="font-size: 8px; opacity: 0.7; text-transform: uppercase;">${window.i18n.t('acc_plan_flux') || 'Fluxo Acum. Planejado'}</span>
                         <span style="font-size: 11px;">${formatCurrency(accPlannedFlux)}</span>
                     </span>
                 </div>
             </div>
             <div class="calendar-day-content">
                 <div class="calendar-flux-item plan">
-                    <span>Fluxo Plan</span>
+                    <span>${window.i18n.t('flux_plan') || 'Fluxo Plan'}</span>
                     <span class="amount">${formatCurrency(fluxPlan)}</span>
                 </div>
                 <div class="calendar-flux-item efetivo">
-                    <span>Fluxo Efetivo</span>
+                    <span>${window.i18n.t('flux_eff') || 'Fluxo Efetivo'}</span>
                     <span class="amount">${formatCurrency(fluxEfetivo)}</span>
                 </div>
                 
                 ${this.renderExpensePairs(data.expenses, day)}
 
                 <div class="calendar-income-item-v2 plan">
-                    <span>Receita Plan</span>
+                    <span>${window.i18n.t('income_plan') || 'Receita Plan'}</span>
                     <span class="amount">${formatCurrency(data.income)}</span>
                 </div>
                 <div class="calendar-income-item-v2 efetivo">
-                    <span>Receita Efet.</span>
+                    <span>${window.i18n.t('income_eff') || 'Receita Efet.'}</span>
                     <span class="amount">${formatCurrency(actualIncome)}</span>
                 </div>
             </div>

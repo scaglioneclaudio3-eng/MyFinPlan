@@ -14,6 +14,7 @@ const DataStore = {
 
     // Default settings
     defaultSettings: {
+        language: 'pt-BR',
         transferWeekendIncomeToMonday: true,
         saturdayIncomePercentage: 50,
         sundayIncomePercentage: 50,

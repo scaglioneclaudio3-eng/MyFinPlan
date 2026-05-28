@@ -282,8 +282,8 @@ const Categories = {
                 <span class="category-name ${hasBlinkingOverdue ? 'blinking-button' : ''}">${category.name}</span>
                 ${futureTotalHtml}
                 <div class="category-totals-wrapper" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center; font-size: 0.9em; font-weight: normal; padding-right: 15px;">
-                    ${!isUnplannedCat ? `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><span style="display: inline-block; width: 85px; text-align: right; font-weight: bold;">${formatCurrency(currentTotal)}</span></div>` : ''}
-                    ${paidTotal > 0 ? `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">pago:</span><span style="display: inline-block; width: 85px; text-align: right; font-weight: bold;">${formatCurrency(paidTotal)}</span></div>` : ''}
+                    ${!isUnplannedCat ? `<div style="color: #ffca28; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">${window.i18n ? window.i18n.t('lbl_planned_lower') : 'planejado'}:</span><span style="display: inline-block; width: 85px; text-align: right; font-weight: bold;">${formatCurrency(currentTotal)}</span></div>` : ''}
+                    ${paidTotal > 0 ? `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">${window.i18n ? window.i18n.t('lbl_paid_lower') : 'pago'}:</span><span style="display: inline-block; width: 85px; text-align: right; font-weight: bold;">${formatCurrency(paidTotal)}</span></div>` : ''}
                 </div>
                 <div class="category-actions">
                     <button class="edit-category-btn" title="Editar">✏️</button>
@@ -457,14 +457,14 @@ const Categories = {
             let plannedAmountHtml = '';
             if (!isUnplannedCat && !isFutureReminder) {
                 plannedAmountHtml = `<div style="color: #ffca28; display: flex; flex-direction: column; align-items: flex-end; width: 100%;">
-                    <div style="display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">planejado:</span><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>
+                    <div style="display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">${window.i18n ? window.i18n.t('lbl_planned_lower') : 'planejado'}:</span><strong style="display: inline-block; width: 85px; text-align: right;">${plannedAmountObjStr}</strong></div>
                     ${(expense.plannedDate === 'all' || expense.plannedDate === 'fds') ? `<div style="font-size: 0.85em; color: rgba(255, 202, 40, 0.7); margin-top: -2px;">(${formatCurrency(expense.plannedAmount || 0)} / dia)</div>` : ''}
                 </div>`;
             }
                 
             let paidAmountHtml = '';
             if (paidTotalExp > 0 && !isFutureReminder) {
-                paidAmountHtml = `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">pago:</span><strong style="display: inline-block; width: 85px; text-align: right;">${formatCurrency(paidTotalExp)}</strong></div>`;
+                paidAmountHtml = `<div style="color: var(--success-color); margin-top: 2px; display: flex; justify-content: flex-end; width: 100%;"><span style="margin-right: 8px;">${window.i18n ? window.i18n.t('lbl_paid_lower') : 'pago'}:</span><strong style="display: inline-block; width: 85px; text-align: right;">${formatCurrency(paidTotalExp)}</strong></div>`;
             }
             
             let dateDisplay = expense.plannedDate;

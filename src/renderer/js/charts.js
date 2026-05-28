@@ -4,6 +4,20 @@
  * Handles chart rendering using Chart.js.
  */
 
+function lightenColor(color, percent) {
+    if (!color) return '#000000';
+    if (color.startsWith('#')) {
+        let r = parseInt(color.substring(1,3), 16);
+        let g = parseInt(color.substring(3,5), 16);
+        let b = parseInt(color.substring(5,7), 16);
+        r = Math.min(255, Math.floor(r + (255 - r) * percent));
+        g = Math.min(255, Math.floor(g + (255 - g) * percent));
+        b = Math.min(255, Math.floor(b + (255 - b) * percent));
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+    return color;
+}
+
 const Charts = {
     expensesChart: null,
     cashflowChart: null,
@@ -99,8 +113,8 @@ const Charts = {
                     datasets.push({
                         label: category.name,
                         data: actualData,
-                        backgroundColor: category.color,
-                        borderColor: category.color,
+                        backgroundColor: lightenColor(category.color, 0.4),
+                        borderColor: lightenColor(category.color, 0.4),
                         borderWidth: 1
                     });
                 }
@@ -126,7 +140,7 @@ const Charts = {
                     padding: {
                         left: 25,
                         top: 15,
-                        bottom: 15
+                        bottom: 30
                     }
                 },
                 plugins: {
@@ -180,7 +194,10 @@ const Charts = {
                     },
                     y: {
                         stacked: true,
-                        grid: { color: '#ccbe8b' },
+                        grid: { 
+                            color: '#ccbe8b',
+                            lineWidth: (context) => (context.tick && context.tick.value === 0) ? 3 : 1
+                        },
                         ticks: {
                             color: '#5d5843',
                             callback: (value) => formatCurrency(Math.abs(value))
@@ -207,14 +224,14 @@ const Charts = {
                     ctx.save();
                     ctx.translate(xPos, (top + yZero) / 2);
                     ctx.rotate(-Math.PI / 2);
-                    ctx.fillText('Despesas Efetivas', 0, 0);
+                    ctx.fillText(window.i18n ? window.i18n.t('panel_daily_expenses') : 'Despesas Efetivas', 0, 0);
                     ctx.restore();
                     
                     // Despesas Planejadas (Bottom Half)
                     ctx.save();
                     ctx.translate(xPos, (yZero + bottom) / 2);
                     ctx.rotate(-Math.PI / 2);
-                    ctx.fillText('Despesas Planejadas', 0, 0);
+                    ctx.fillText(window.i18n ? window.i18n.t('panel_planned_expenses') : 'Despesas Planejadas', 0, 0);
                     ctx.restore();
                     
                     ctx.restore();
@@ -304,7 +321,7 @@ const Charts = {
                 labels,
                 datasets: [
                     {
-                        label: 'Receita Prevista',
+                        label: window.i18n ? window.i18n.t('summary_planned_income') : 'Receita Prevista',
                         data: plannedIncome,
                         backgroundColor: 'rgba(40, 167, 69, 0.5)',
                         borderColor: 'rgba(40, 167, 69, 1)',
@@ -312,7 +329,7 @@ const Charts = {
                         stack: 'income'
                     },
                     {
-                        label: 'Receita Recebida',
+                        label: window.i18n ? window.i18n.t('summary_received_income') : 'Receita Recebida',
                         data: receivedIncome,
                         backgroundColor: 'rgba(40, 167, 69, 1)',
                         borderColor: 'rgba(40, 167, 69, 1)',
@@ -320,7 +337,7 @@ const Charts = {
                         stack: 'income-actual'
                     },
                     {
-                        label: 'Despesa Prevista',
+                        label: window.i18n ? window.i18n.t('summary_planned_expenses') : 'Despesa Prevista',
                         data: plannedExpenses.map(v => -v),
                         backgroundColor: 'rgba(255, 182, 193, 0.7)', // Pink
                         borderColor: 'rgba(255, 105, 180, 1)', // Hot Pink
@@ -328,7 +345,7 @@ const Charts = {
                         stack: 'expense'
                     },
                     {
-                        label: 'Despesa Paga',
+                        label: window.i18n ? window.i18n.t('summary_paid_expenses') : 'Despesa Paga',
                         data: paidExpenses.map(v => -v),
                         backgroundColor: 'rgba(220, 53, 69, 1)',
                         borderColor: 'rgba(220, 53, 69, 1)',
@@ -336,7 +353,7 @@ const Charts = {
                         stack: 'expense-actual'
                     },
                     {
-                        label: 'Saldo Previsto',
+                        label: window.i18n ? window.i18n.t('summary_planned_balance') : 'Saldo Previsto',
                         data: plannedBalance,
                         type: 'line',
                         borderColor: '#00008B', // Dark Blue
@@ -346,7 +363,7 @@ const Charts = {
                         tension: 0.1
                     },
                     {
-                        label: 'Saldo Efetivo',
+                        label: window.i18n ? window.i18n.t('summary_actual_balance') : 'Saldo Efetivo',
                         data: actualBalance,
                         type: 'line',
                         borderColor: 'rgba(74, 144, 217, 1)',

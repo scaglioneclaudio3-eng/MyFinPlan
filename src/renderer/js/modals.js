@@ -1113,6 +1113,32 @@ const Modals = {
             e.preventDefault();
 
             const specialType = document.getElementById('expense-special-type').value || null;
+            let description = document.getElementById('expense-description').value.trim();
+
+            if (specialType) {
+                const specialTypeSelect = document.getElementById('expense-special-type');
+                let selectedText = specialTypeSelect.options[specialTypeSelect.selectedIndex].text;
+                
+                // Strip parentheses (e.g., " (Dia 20)") to keep the description clean
+                selectedText = selectedText.replace(/\s*\(.*?\)/g, '').trim();
+                
+                // Strip any existing special type label to prevent duplicates (e.g. "Ricardo - INSS - FGTS")
+                const allLabels = Array.from(specialTypeSelect.options)
+                    .map(opt => opt.text.replace(/\s*\(.*?\)/g, '').trim())
+                    .filter(text => text && text !== specialTypeSelect.options[0].text);
+                
+                for (const label of allLabels) {
+                    const suffix = ` - ${label}`;
+                    if (description.endsWith(suffix)) {
+                        description = description.slice(0, -suffix.length).trim();
+                        break;
+                    }
+                }
+                
+                description = `${description} - ${selectedText}`;
+                document.getElementById('expense-description').value = description;
+            }
+
             const plannedDateInput = document.getElementById('expense-planned-date').value.trim().toLowerCase();
             let plannedDate = 0;
             if (plannedDateInput === 'all' || plannedDateInput === 'fds') {
@@ -2192,23 +2218,24 @@ const Modals = {
      * Opens the import explanation modal
      */
     async openImportModal() {
+        const t = window.i18n ? window.i18n.t : (key) => key;
         const importHtml = `
             <div class="tutorial-content" style="padding: 20px;">
-                <h4 style="margin-bottom: 15px; color: #dc3545;">Atenção: A Importação sobrescreverá dados!</h4>
-                <p style="color: #555;">O sistema aceita dois tipos de arquivos gerados por ele próprio:</p>
+                <h4 style="margin-bottom: 15px; color: #dc3545;">${t('imp_warn')}</h4>
+                <p style="color: #555;">${t('imp_sub')}</p>
                 
                 <div class="tutorial-step" style="background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                    <h5 style="color: #4a90d9; margin-bottom: 10px; font-size: 16px;">1. Exportação Manual (Um único mês)</h5>
-                    <p style="font-size: 14px; color: #333; margin-bottom: 8px;"><strong>Como identificar:</strong> Arquivos com nomes como <code>financas-export-DATA.json</code>, localizados na pasta que você escolheu salvar (ex: Documentos, Downloads).</p>
-                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;"><strong>O que faz:</strong> Substitui apenas os dados do mês atual visualizado pelos dados contidos no arquivo.</p>
-                    <button id="btn-import-manual" style="padding: 8px 15px; background: #4a90d9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Importar Exportação Manual</button>
+                    <h5 style="color: #4a90d9; margin-bottom: 10px; font-size: 16px;">${t('imp_m_title')}</h5>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 8px;">${t('imp_m_desc1')}</p>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;">${t('imp_m_desc2')}</p>
+                    <button id="btn-import-manual" style="padding: 8px 15px; background: #4a90d9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">${t('btn_imp_m')}</button>
                 </div>
 
                 <div class="tutorial-step" style="background: #fff3f3; border: 1px solid #f5c6cb; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                    <h5 style="color: #dc3545; margin-bottom: 10px; font-size: 16px;">2. Backup Automático (Todos os meses)</h5>
-                    <p style="font-size: 14px; color: #333; margin-bottom: 8px;"><strong>Como identificar:</strong> Arquivos com nomes como <code>backup-DATA.json</code>.</p>
-                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;"><strong>O que faz:</strong> Substitui <strong>TODOS</strong> os seus dados atuais pelo backup selecionado.</p>
-                    <button id="btn-import-backup" style="padding: 8px 15px; background: #dc3545; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Restaurar Backup Automático</button>
+                    <h5 style="color: #dc3545; margin-bottom: 10px; font-size: 16px;">${t('imp_b_title')}</h5>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 8px;">${t('imp_b_desc1')}</p>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;">${t('imp_b_desc2')}</p>
+                    <button id="btn-import-backup" style="padding: 8px 15px; background: #dc3545; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">${t('btn_imp_b')}</button>
                 </div>
             </div>
         `;
@@ -2218,7 +2245,7 @@ const Modals = {
         modal.innerHTML = `
             <div class="modal-content modal-lg" id="import-modal-bg" style="background: white; border-radius: 8px;">
                 <div class="modal-header" style="border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 0;">
-                    <h3 style="color: #000; margin: 0;">Importar Dados</h3>
+                    <h3 style="color: #000; margin: 0;">${t('imp_title')}</h3>
                     <button class="modal-close" style="color: #000; font-size: 24px; border: none; background: none; cursor: pointer;">&times;</button>
                 </div>
                 ${importHtml}
@@ -2267,25 +2294,26 @@ const Modals = {
      * Opens the export explanation modal
      */
     async openExportModal() {
+        const t = window.i18n ? window.i18n.t : (key) => key;
         const exportHtml = `
             <div class="tutorial-content" style="padding: 20px;">
-                <h4 style="margin-bottom: 15px; color: #28a745;">Exportação Manual de Mês Único</h4>
-                <p style="color: #555;">Esta ferramenta exporta os dados do mês que você está visualizando agora na tela.</p>
+                <h4 style="margin-bottom: 15px; color: #28a745;">${t('exp_sub1')}</h4>
+                <p style="color: #555;">${t('exp_sub2')}</p>
                 
                 <div class="tutorial-step" style="background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                    <h5 style="color: #4a90d9; margin-bottom: 10px; font-size: 16px;">O que será exportado?</h5>
+                    <h5 style="color: #4a90d9; margin-bottom: 10px; font-size: 16px;">${t('exp_what_title')}</h5>
                     <ul style="font-size: 14px; color: #333; margin-bottom: 8px; padding-left: 20px;">
-                        <li>Todas as <strong>receitas e despesas</strong> do mês atual.</li>
-                        <li>Suas <strong>categorias</strong> personalizadas.</li>
-                        <li>Suas <strong>configurações</strong> gerais.</li>
+                        <li>${t('exp_what_l1')}</li>
+                        <li>${t('exp_what_l2')}</li>
+                        <li>${t('exp_what_l3')}</li>
                     </ul>
-                    <p style="font-size: 14px; color: #dc3545; margin-bottom: 0;"><strong>Atenção:</strong> Os dados de outros meses NÃO serão incluídos neste arquivo. Se quiser salvar todos os meses de uma vez, use a opção "Backup Agora" no menu principal.</p>
+                    <p style="font-size: 14px; color: #dc3545; margin-bottom: 0;">${t('exp_what_warn')}</p>
                 </div>
 
                 <div class="tutorial-step" style="background: #e8f4f8; border: 1px solid #b8daff; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                    <h5 style="color: #0056b3; margin-bottom: 10px; font-size: 16px;">Onde devo guardar?</h5>
-                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;">Recomendamos que você crie uma pasta segura, como no seu <strong>Google Drive, OneDrive ou um Pendrive</strong>, para garantir que você não perca esses dados caso o seu computador tenha algum problema.</p>
-                    <button id="btn-export-proceed" style="padding: 10px 20px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: bold; width: 100%;">Escolher Local e Exportar</button>
+                    <h5 style="color: #0056b3; margin-bottom: 10px; font-size: 16px;">${t('exp_where_title')}</h5>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;">${t('exp_where_desc')}</p>
+                    <button id="btn-export-proceed" style="padding: 10px 20px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: bold; width: 100%;">${t('btn_exp')}</button>
                 </div>
             </div>
         `;
@@ -2295,7 +2323,7 @@ const Modals = {
         modal.innerHTML = `
             <div class="modal-content modal-lg" id="export-modal-bg" style="background: white; border-radius: 8px;">
                 <div class="modal-header" style="border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 0;">
-                    <h3 style="color: #000; margin: 0;">Exportar Dados</h3>
+                    <h3 style="color: #000; margin: 0;">${t('exp_title')}</h3>
                     <button class="modal-close" style="color: #000; font-size: 24px; border: none; background: none; cursor: pointer;">&times;</button>
                 </div>
                 ${exportHtml}
@@ -2335,24 +2363,25 @@ const Modals = {
      * Opens the backup explanation modal
      */
     async openBackupModal() {
+        const t = window.i18n ? window.i18n.t : (key) => key;
         const backupHtml = `
             <div class="tutorial-content" style="padding: 20px;">
-                <h4 style="margin-bottom: 15px; color: #17a2b8;">Criação de Backup Rápido</h4>
-                <p style="color: #555;">Esta ferramenta cria uma cópia de segurança instantânea de <strong>TODO O SEU SISTEMA</strong>.</p>
+                <h4 style="margin-bottom: 15px; color: #17a2b8;">${t('bkp_sub1')}</h4>
+                <p style="color: #555;">${t('bkp_sub2')}</p>
                 
                 <div class="tutorial-step" style="background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                    <h5 style="color: #4a90d9; margin-bottom: 10px; font-size: 16px;">O que será salvo?</h5>
+                    <h5 style="color: #4a90d9; margin-bottom: 10px; font-size: 16px;">${t('bkp_what_title')}</h5>
                     <ul style="font-size: 14px; color: #333; margin-bottom: 0; padding-left: 20px;">
-                        <li>Todos os dados de <strong>todos os meses</strong> (passados, atuais e futuros).</li>
-                        <li>Todas as suas <strong>categorias</strong> e <strong>configurações</strong>.</li>
+                        <li>${t('bkp_what_l1')}</li>
+                        <li>${t('bkp_what_l2')}</li>
                     </ul>
                 </div>
 
                 <div class="tutorial-step" style="background: #e8f4f8; border: 1px solid #b8daff; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                    <h5 style="color: #0056b3; margin-bottom: 10px; font-size: 16px;">Para onde vai o arquivo?</h5>
-                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;">Para facilitar, o aplicativo salvará esse arquivo automaticamente em uma <strong>pasta escondida no seu computador</strong>. Se algum dia precisar voltar atrás (restaurar), a opção "Arquivo > Importar > Restaurar Backup Automático" saberá exatamente onde procurar!</p>
-                    <p style="font-size: 14px; color: #dc3545; margin-bottom: 12px;"><strong>Aviso:</strong> Se o seu computador pifar, esse arquivo também pode ser perdido. Para salvar um backup em um pendrive ou na nuvem, feche essa janela, vá na engrenagem de <strong>Configurações</strong> e use o botão "Exportar Backup Completo".</p>
-                    <button id="btn-backup-proceed" style="padding: 10px 20px; background: #17a2b8; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: bold; width: 100%;">Criar Backup Agora</button>
+                    <h5 style="color: #0056b3; margin-bottom: 10px; font-size: 16px;">${t('bkp_where_title')}</h5>
+                    <p style="font-size: 14px; color: #333; margin-bottom: 12px;">${t('bkp_where_desc')}</p>
+                    <p style="font-size: 14px; color: #dc3545; margin-bottom: 12px;">${t('bkp_where_warn')}</p>
+                    <button id="btn-backup-proceed" style="padding: 10px 20px; background: #17a2b8; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: bold; width: 100%;">${t('btn_bkp')}</button>
                 </div>
             </div>
         `;
@@ -2362,7 +2391,7 @@ const Modals = {
         modal.innerHTML = `
             <div class="modal-content modal-lg" id="backup-modal-bg" style="background: white; border-radius: 8px;">
                 <div class="modal-header" style="border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 0;">
-                    <h3 style="color: #000; margin: 0;">Fazer Backup</h3>
+                    <h3 style="color: #000; margin: 0;">${t('bkp_title')}</h3>
                     <button class="modal-close" style="color: #000; font-size: 24px; border: none; background: none; cursor: pointer;">&times;</button>
                 </div>
                 ${backupHtml}

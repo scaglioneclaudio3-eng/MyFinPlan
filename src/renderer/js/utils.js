@@ -65,6 +65,10 @@ function isWeekend(year, month, day) {
  * @returns {string} Weekday name
  */
 function getWeekdayName(dayOfWeek) {
+    if (window.i18n) {
+        const keys = ['day_sun', 'day_mon', 'day_tue', 'day_wed', 'day_thu', 'day_fri', 'day_sat'];
+        return window.i18n.t(keys[dayOfWeek]);
+    }
     const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     return days[dayOfWeek];
 }

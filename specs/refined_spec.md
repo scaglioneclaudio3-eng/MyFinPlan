@@ -4,7 +4,7 @@
 
 A desktop Electron application for personal finance management that replicates and improves upon the functionality of the legacy Excel spreadsheet (`legacy/excel_app.xlsx`). The app enables users to track monthly expenses, income, and cash flow with visual calendar views and charts.
 
-**Language:** Portuguese (Brazilian)  
+**Language:** Bilingual (Portuguese BR and English US), togglable via UI
 **Currency:** BRL (R$)  
 **Platform:** Windows (Electron)
 
@@ -79,6 +79,7 @@ A desktop Electron application for personal finance management that replicates a
 ### 3.5 Settings
 ```json
 {
+  "language": "string (pt-BR or en-US)",
   "transferWeekendIncomeToMonday": "boolean",
   "saturdayIncomePercentage": "number (0-100)",
   "sundayIncomePercentage": "number (0-100)",
@@ -322,6 +323,7 @@ Compact view showing 7 days per row (like a calendar), with each day cell contai
 - **Responsive tables:** Horizontal scroll for wide data
 - **Tooltips:** Help text on hover for complex fields
 - **Keyboard navigation:** Tab between fields, Enter to save
+- **Internationalization (i18n):** Real-time language switching (PT/EN) using a centralized dictionary without page reloads.
 
 ---
 

@@ -559,7 +559,7 @@ body {
 .income-list-header {
     display: grid;
     /* Columns: Description (flex), Future (fixed), Date (fixed), Amounts (fixed) */
-    grid-template-columns: 1fr 100px 80px 180px;
+    grid-template-columns: 1fr 130px 80px 180px;
     align-items: center;
     padding: var(--spacing-sm) var(--spacing-md);
     margin-bottom: var(--spacing-xs);
@@ -582,7 +582,7 @@ body {
 /* Income Card */
 .income-card {
     display: grid;
-    grid-template-columns: 1fr 100px 80px 180px;
+    grid-template-columns: 1fr 130px 80px 180px;
     align-items: center;
     padding: var(--spacing-sm) var(--spacing-md);
     margin-bottom: var(--spacing-xs);

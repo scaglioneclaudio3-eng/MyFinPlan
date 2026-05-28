@@ -62,7 +62,7 @@ const PrintModule = {
                 const month = DataStore.currentMonth?.month || (new Date().getMonth() + 1);
                 return `${expense.paidDate}/${month.toString().padStart(2, '0')}`;
             }
-            return 'Pago'; // Fallback if no date but paid
+            return window.i18n ? window.i18n.t('print_paid') : 'Pago'; // Fallback if no date but paid
         }
 
         // Not paid fully
@@ -78,7 +78,7 @@ const PrintModule = {
         if (expense.plannedDate === -1) {
             // "Atrasado" from previous months. 
             // It's already overdue by definition.
-            return 'atraso';
+            return window.i18n ? window.i18n.t('print_overdue') : 'atraso';
         } else if (expense.plannedDate === 0 || expense.isFutureReminder) {
             // Future reminder.
             return '-';
@@ -88,7 +88,7 @@ const PrintModule = {
         }
 
         if (dueDate < today) {
-            return 'atraso';
+            return window.i18n ? window.i18n.t('print_overdue') : 'atraso';
         } else {
             return '-';
         }
@@ -114,7 +114,7 @@ const PrintModule = {
         });
 
         if (activeCategories.length === 0) {
-            container.innerHTML = '<p>Nenhuma despesa para exibir.</p>';
+            container.innerHTML = `<p>${window.i18n ? window.i18n.t('print_no_expenses') : 'Nenhuma despesa para exibir.'}</p>`;
             return;
         }
 
@@ -177,11 +177,11 @@ const PrintModule = {
                     <table class="print-table" style="color: #ffffff; border-color: rgba(255,255,255,0.3);">
                         <thead style="color: #ffffff;">
                             <tr style="border-bottom: 1px solid #ffffff;">
-                                <th class="col-description" style="border-bottom: 1px solid #ffffff;">Descrição</th>
-                                <th class="col-date text-right" style="border-bottom: 1px solid #ffffff;">Vencimento</th>
-                                <th class="col-amount text-right" style="border-bottom: 1px solid #ffffff;">Valor Previsto</th>
-                                <th class="col-amount text-right" style="border-bottom: 1px solid #ffffff;">Valor Pago</th>
-                                <th class="col-status text-center" style="border-bottom: 1px solid #ffffff;">Data Pagamento</th>
+                                <th class="col-description" style="border-bottom: 1px solid #ffffff;">${window.i18n ? window.i18n.t('col_description') : 'Descrição'}</th>
+                                <th class="col-date text-right" style="border-bottom: 1px solid #ffffff;">${window.i18n ? window.i18n.t('lbl_planned_date') : 'Vencimento'}</th>
+                                <th class="col-amount text-right" style="border-bottom: 1px solid #ffffff;">${window.i18n ? window.i18n.t('lbl_planned_amount') : 'Valor Previsto'}</th>
+                                <th class="col-amount text-right" style="border-bottom: 1px solid #ffffff;">${window.i18n ? window.i18n.t('print_total_paid') : 'Valor Pago'}</th>
+                                <th class="col-status text-center" style="border-bottom: 1px solid #ffffff;">${window.i18n ? window.i18n.t('col_date') : 'Data Pagamento'}</th>
                             </tr>
                         </thead>
                         <tbody style="background-color: #ffffff; color: #000000;">
@@ -196,9 +196,9 @@ const PrintModule = {
 
                 let dateDisplay = expense.plannedDate;
                 if (expense.isFutureReminder) {
-                    dateDisplay = expense.plannedDate || 'Futuro';
+                    dateDisplay = expense.plannedDate || (window.i18n ? window.i18n.t('print_future') : 'Futuro');
                 } else if (dateDisplay === 0) {
-                    dateDisplay = 'Futuro';
+                    dateDisplay = window.i18n ? window.i18n.t('print_future') : 'Futuro';
                 } else if (dateDisplay === -1) {
                     dateDisplay = getNextWorkingDay(year, month, 1, holidays);
                 }
@@ -216,7 +216,7 @@ const PrintModule = {
 
             html += `
                     <tr class="subtotal-row">
-                        <td colspan="2" class="text-right font-bold" style="border-top: 2px solid #000; color: #000; background-color: #f9f9f9;">Total:</td>
+                        <td colspan="2" class="text-right font-bold" style="border-top: 2px solid #000; color: #000; background-color: #f9f9f9;">${window.i18n ? window.i18n.t('col_total') : 'Total'}:</td>
                         <td class="col-amount text-right font-bold" style="border-top: 2px solid #000; color: #000; background-color: #f9f9f9;">${formatCurrency(totalPlanned)}</td>
                         <td class="col-amount text-right font-bold" style="border-top: 2px solid #000; color: #000; background-color: #f9f9f9;">${formatCurrency(totalPaid)}</td>
                         <td class="col-status" style="border-top: 2px solid #000; background-color: #f9f9f9;"></td>
@@ -234,10 +234,10 @@ const PrintModule = {
         const totalDiv = document.createElement('div');
         totalDiv.className = 'print-grand-total';
         totalDiv.innerHTML = `
-            <h3>Total Geral (Categorias)</h3>
+            <h3>${window.i18n ? window.i18n.t('print_total_categories') : 'Total Geral (Categorias)'}</h3>
             <div class="total-row">
-                <span>Previsto: <strong>${formatCurrency(grandTotalPlanned)}</strong></span>
-                <span style="margin-left: 20px;">Pago: <strong>${formatCurrency(grandTotalPaid)}</strong></span>
+                <span>${window.i18n ? window.i18n.t('print_total_planned') : 'Previsto'}: <strong>${formatCurrency(grandTotalPlanned)}</strong></span>
+                <span style="margin-left: 20px;">${window.i18n ? window.i18n.t('print_total_paid') : 'Pago'}: <strong>${formatCurrency(grandTotalPaid)}</strong></span>
             </div>
         `;
         container.appendChild(totalDiv);
@@ -255,7 +255,7 @@ const PrintModule = {
         const expenses = [...(DataStore.currentMonth?.expenses || [])];
 
         if (expenses.length === 0) {
-            container.innerHTML = '<p>Nenhuma despesa para exibir.</p>';
+            container.innerHTML = `<p>${window.i18n ? window.i18n.t('print_no_expenses') : 'Nenhuma despesa para exibir.'}</p>`;
             return;
         }
 
@@ -270,20 +270,21 @@ const PrintModule = {
                 return {
                     sortValue: -1,
                     display: getNextWorkingDay(year, month, 1, holidays),
-                    label: 'Atrasado / Primeiro Dia Útil'
+                    label: window.i18n ? window.i18n.t('print_overdue_first_day') : 'Atrasado / Primeiro Dia Útil'
                 };
             }
             if (plannedDate === 0 || expense.isFutureReminder) {
+                const futStr = window.i18n ? window.i18n.t('print_future') : 'Futuro';
                 return {
                     sortValue: 999,
-                    display: expense.isFutureReminder ? (plannedDate || 'Futuro') : 'Futuro',
-                    label: expense.isFutureReminder ? (plannedDate || 'Futuro') : 'Futuro'
+                    display: expense.isFutureReminder ? (plannedDate || futStr) : futStr,
+                    label: expense.isFutureReminder ? (plannedDate || futStr) : futStr
                 };
             }
             return {
                 sortValue: plannedDate,
                 display: plannedDate,
-                label: `Dia ${plannedDate}`
+                label: `${window.i18n ? window.i18n.t('lbl_day') || 'Dia' : 'Dia'} ${plannedDate}`
             };
         };
 
@@ -318,11 +319,11 @@ const PrintModule = {
                 <table class="print-table">
                     <thead>
                         <tr>
-                            <th class="col-description">Descrição</th>
-                            <th class="col-category">Categoria</th>
-                            <th class="text-right col-amount">Valor Previsto</th>
-                            <th class="text-right col-amount">Valor Pago</th>
-                            <th class="text-center col-status">Data Pagamento</th>
+                            <th class="col-description">${window.i18n ? window.i18n.t('col_description') : 'Descrição'}</th>
+                            <th class="col-category">${window.i18n ? window.i18n.t('col_category') : 'Categoria'}</th>
+                            <th class="text-right col-amount">${window.i18n ? window.i18n.t('lbl_planned_amount') : 'Valor Previsto'}</th>
+                            <th class="text-right col-amount">${window.i18n ? window.i18n.t('print_total_paid') : 'Valor Pago'}</th>
+                            <th class="text-center col-status">${window.i18n ? window.i18n.t('col_date') : 'Data Pagamento'}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -330,7 +331,7 @@ const PrintModule = {
 
             group.items.forEach(expense => {
                 const category = DataStore.categories.find(c => c.id === expense.categoryId);
-                const categoryName = category ? category.name : 'Sem Categoria';
+                const categoryName = category ? category.name : (window.i18n ? window.i18n.t('print_no_category') : 'Sem Categoria');
                 const paidAmount = expense.paidAmount ? formatCurrency(expense.paidAmount) : '-';
 
                 html += `

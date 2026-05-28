@@ -71,6 +71,15 @@ const App = {
             return; // Stop initialization
         }
 
+        // Setup language
+        if (window.i18n && DataStore.settings && DataStore.settings.language) {
+            window.i18n.setLanguage(DataStore.settings.language);
+            const langToggleBtn = document.getElementById('lang-toggle-btn');
+            if (langToggleBtn) {
+                langToggleBtn.textContent = DataStore.settings.language === 'pt-BR' ? 'EN' : 'PT';
+            }
+        }
+
         // Set up year dropdown (3 years range)
         this.setupYearDropdown();
 
@@ -228,7 +237,12 @@ const App = {
         if (!totals) return;
 
         // Update chart month displays
-        const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        const monthNames = [
+            window.i18n.t('month_1'), window.i18n.t('month_2'), window.i18n.t('month_3'), 
+            window.i18n.t('month_4'), window.i18n.t('month_5'), window.i18n.t('month_6'), 
+            window.i18n.t('month_7'), window.i18n.t('month_8'), window.i18n.t('month_9'), 
+            window.i18n.t('month_10'), window.i18n.t('month_11'), window.i18n.t('month_12')
+        ];
         const monthName = monthNames[this.currentMonth - 1] || '';
         const monthText = ` - ${monthName} ${this.currentYear}`;
         document.querySelectorAll('.chart-month-display').forEach(el => {
@@ -265,46 +279,30 @@ const App = {
      * Sets up UI event listeners
      */
     setupEventListeners() {
-        // Month navigation
-        // Month navigation
-        document.getElementById('prev-month').addEventListener('click', () => {
-            let month = parseInt(this.currentMonth) - 1;
-            let year = parseInt(this.currentYear);
-            if (month < 1) {
-                month = 12;
-                year--;
+        // Language Toggle
+        const langToggleBtn = document.getElementById('lang-toggle-btn');
+        if (langToggleBtn) {
+            langToggleBtn.addEventListener('click', () => {
+                if (window.i18n) {
+                    const newLang = window.i18n.getLanguage() === 'pt-BR' ? 'en-US' : 'pt-BR';
+                    window.i18n.setLanguage(newLang);
+                }
+            });
+        }
+
+        window.addEventListener('languageChanged', async (e) => {
+            const langToggleBtn = document.getElementById('lang-toggle-btn');
+            if (langToggleBtn) {
+                langToggleBtn.textContent = e.detail.language === 'pt-BR' ? 'EN' : 'PT';
             }
-            // Update dropdowns first to reflect change visually if loadMonth takes time
-            const monthSelect = document.getElementById('month-select');
-            const yearSelect = document.getElementById('year-select');
-            if (monthSelect) monthSelect.value = month;
-            if (yearSelect) yearSelect.value = year;
-
-            this.loadMonth(year, month);
-        });
-
-        document.getElementById('next-month').addEventListener('click', () => {
-            let month = parseInt(this.currentMonth) + 1;
-            let year = parseInt(this.currentYear);
-            if (month > 12) {
-                month = 1;
-                year++;
+            if (DataStore && DataStore.settings) {
+                DataStore.settings.language = e.detail.language;
+                await DataStore.saveSettings();
             }
-
-            const monthSelect = document.getElementById('month-select');
-            const yearSelect = document.getElementById('year-select');
-            if (monthSelect) monthSelect.value = month;
-            if (yearSelect) yearSelect.value = year;
-
-            this.loadMonth(year, month);
+            this.updateSummary();
+            this.renderCurrentView();
         });
 
-        document.getElementById('today-btn').addEventListener('click', () => {
-            const now = new Date();
-            document.getElementById('month-select').value = now.getMonth() + 1;
-            document.getElementById('year-select').value = now.getFullYear();
-            this.loadMonth(now.getFullYear(), now.getMonth() + 1);
-        });
 
         // Month/year selectors
         document.getElementById('month-select').addEventListener('change', (e) => {
@@ -352,9 +350,7 @@ const App = {
             Modals.openCopyMonthModal();
         });
 
-        window.api.onMenuCategories(() => {
-            Modals.openCategoryModal();
-        });
+
 
         window.api.onMenuSettings(() => {
             Modals.openSettingsModal();
@@ -368,20 +364,7 @@ const App = {
             }
         });
 
-        window.api.onMenuViewCalendar(() => {
-            this.currentView = 'calendar';
-            this.renderCurrentView();
-        });
 
-        window.api.onMenuViewCharts(() => {
-            this.currentView = 'charts-1';
-            this.renderCurrentView();
-        });
-
-        window.api.onMenuViewSummary(() => {
-            this.currentView = 'entry';
-            this.renderCurrentView();
-        });
 
         window.api.onMenuTutorial(() => {
             this.showTutorial();
@@ -408,53 +391,44 @@ const App = {
      * Shows the tutorial dialog
      */
     showTutorial() {
+        const t = window.i18n ? window.i18n.t : (key) => key;
         const tutorialHtml = `
-            <div class="tutorial-content">
+            <div class="tutorial-content" style="max-height: 70vh; overflow-y: auto; padding-right: 15px;">
                 <div class="tutorial-step">
-                    <h4>1. Adicionando Despesas</h4>
-                    <p>Clique no botão + ao lado de uma categoria para adicionar uma nova despesa. Preencha a descrição, valor previsto e dia de vencimento.</p>
+                    <h4>${t('tut_s1_t')}</h4>
+                    <p>${t('tut_s1_d')}</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>2. Datas Especiais</h4>
-                    <ul style="list-style-type: none; padding-left: 0;">
-                        <li>- Dia -1: Pagamentos atrasados do mês anterior</li>
-                        <li>- Dia 0: Lembretes de despesas futuras</li>
-                        <li>- Dia 1-31: Data normal de vencimento</li>
-                    </ul>
+                    <h4>${t('tut_s2_t')}</h4>
+                    <p>${t('tut_s2_d')}</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>3. Pagamentos e Despesas Não Categorizadas</h4>
-                    <p>Clique em uma despesa para informar o valor pago e a data. Valores de 'planejado' e 'pago' são exibidos com clareza. Para adicionar despesas extras, clique num dia no painel "Despesas Efetivas Diárias" para abrir o popup de detalhes expandido.</p>
+                    <h4>${t('tut_s3_t')}</h4>
+                    <p>${t('tut_s3_d')}</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>4. Receitas Esperadas e Efetivas</h4>
-                    <p>Você pode editar as "Receitas Esperadas" na tabela superior a qualquer momento. Na seção "Renda Efetiva Diária" (no fim da página), clique em qualquer dia para abrir o popup detalhado e lançar suas receitas reais daquele dia.</p>
+                    <h4>${t('tut_s4_t')}</h4>
+                    <p>${t('tut_s4_d')}</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>5. Visualizações e Calendário</h4>
-                    <p>Use as abas no topo para alternar as visões. No Calendário, dicas visuais destacam os fins de semana, o "Fluxo Acum. Plan." (destaque rosa para o mês todo) e o "Fluxo Acum. Efet." (exibido e atualizado até a data corrente).</p>
+                    <h4>${t('tut_s5_t')}</h4>
+                    <p>${t('tut_s5_d')}</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>6. Detalhes Diários no Calendário</h4>
-                    <p>No calendário clique em um dia para visualizar em detalhes as atividades financeiras e os correspondentes resumos do dia.</p>
+                    <h4>${t('tut_s6_t')}</h4>
+                    <p>${t('tut_s6_d')}</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>7. Valores Recorrentes (all) e Feriados</h4>
-                    <p>Lançamentos definidos com dia "all" ocorrem todos os dias. Você pode ter porcentagens de renda adaptadas para fins de semana nas Configurações, além da opção de transferir automaticamente lançamentos do final de semana/feriado para o próximo dia útil.</p>
+                    <h4>${t('tut_s7_t')}</h4>
+                    <p>${t('tut_s7_d')}</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>8. Copiando Meses</h4>
-                    <p>Use o menu Editar → Copiar Mês para copiar despesas e configurações rapidamente de um mês para outro.</p>
+                    <h4>${t('tut_s8_t')}</h4>
+                    <p>${t('tut_s8_d')}</p>
                 </div>
                 <div class="tutorial-step">
-                    <h4>9. Configurações</h4>
-                    <p>No menu Configurações você pode ajustar:</p>
-                    <ul style="list-style-type: none; padding-left: 0;">
-                        <li>a) Porcentagem de renda recebida em fins de semana;</li>
-                        <li>b) Transferência automática para o primeiro dia útil subsequente;</li>
-                        <li>c) Localidade de referência para o cálculo de feriados;</li>
-                        <li>d) Frequência e criação de backup.</li>
-                    </ul>
+                    <h4>${t('tut_s9_t')}</h4>
+                    <p>${t('tut_s9_d')}</p>
                 </div>
             </div>
         `;
@@ -465,7 +439,7 @@ const App = {
         modal.innerHTML = `
             <div class="modal-content modal-lg" id="tutorial-modal-bg">
                 <div class="modal-header" style="border-bottom-color: rgba(0,0,0,0.1);">
-                    <h3 style="color: #000;">Tutorial</h3>
+                    <h3 style="color: #000;">${t('tut_title')}</h3>
                     <button class="modal-close" style="color: #000;">&times;</button>
                 </div>
                 ${tutorialHtml}

@@ -7,14 +7,9 @@
  */
 
 const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
-const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 
-// Configure auto-updater logging
-autoUpdater.logger = true;
-autoUpdater.autoDownload = true;
-autoUpdater.autoInstallOnAppQuit = true;
 
 // Set app name explicitly for dialogs
 app.setName('MyFinPlan');
@@ -74,62 +69,83 @@ function createWindow() {
     });
 }
 
+const menuTranslations = {
+    'pt-BR': {
+        file: 'Arquivo',
+        import: 'Importar...',
+        export: 'Exportar...',
+        backup: 'Backup Agora',
+        print: 'Imprimir',
+        quit: 'Sair',
+        edit: 'Editar',
+        copyMonth: 'Copiar Mês...',
+        settings: 'Configurações',
+        preferences: 'Preferências...',
+        help: 'Ajuda',
+        tutorial: 'Tutorial',
+        about: 'Sobre',
+        aboutMsg: 'Aplicativo para controle de finanças pessoais mensais.'
+    },
+    'en-US': {
+        file: 'File',
+        import: 'Import...',
+        export: 'Export...',
+        backup: 'Backup Now',
+        print: 'Print',
+        quit: 'Quit',
+        edit: 'Edit',
+        copyMonth: 'Copy Month...',
+        settings: 'Settings',
+        preferences: 'Preferences...',
+        help: 'Help',
+        tutorial: 'Tutorial',
+        about: 'About',
+        aboutMsg: 'Application for personal monthly finance control.'
+    }
+};
+
+let currentMenuLang = 'pt-BR';
+
 /**
  * Creates the application menu
  */
-function createMenu() {
+function createMenu(lang = 'pt-BR') {
+    currentMenuLang = lang;
+    const t = menuTranslations[lang] || menuTranslations['pt-BR'];
+
     const template = [
         {
-            label: 'Arquivo',
+            label: t.file,
             submenu: [
-                { label: 'Novo Mês', click: () => mainWindow.webContents.send('menu-new-month') },
+                { label: t.import, click: () => mainWindow && mainWindow.webContents.send('menu-import') },
+                { label: t.export, click: () => mainWindow && mainWindow.webContents.send('menu-export') },
                 { type: 'separator' },
-                { label: 'Importar...', click: () => mainWindow.webContents.send('menu-import') },
-                { label: 'Exportar...', click: () => mainWindow.webContents.send('menu-export') },
+                { label: t.backup, click: () => mainWindow && mainWindow.webContents.send('menu-backup') },
                 { type: 'separator' },
-                { label: 'Backup Agora', click: () => mainWindow.webContents.send('menu-backup') },
+                { label: t.print, accelerator: 'CmdOrCtrl+P', click: () => mainWindow && mainWindow.webContents.print({ landscape: true, printBackground: true }) },
                 { type: 'separator' },
-                { label: 'Imprimir', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.print({ landscape: true, printBackground: true }) },
-                { type: 'separator' },
-                { label: 'Sair', accelerator: 'Alt+F4', role: 'quit' }
+                { label: t.quit, accelerator: 'Alt+F4', role: 'quit' }
             ]
         },
         {
-            label: 'Editar',
+            label: t.edit,
             submenu: [
-                { label: 'Desfazer', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
-                { label: 'Refazer', accelerator: 'CmdOrCtrl+Y', role: 'redo' },
-                { type: 'separator' },
-                { label: 'Copiar Mês...', click: () => mainWindow.webContents.send('menu-copy-month') },
-                { type: 'separator' },
-                { label: 'Categorias...', click: () => mainWindow.webContents.send('menu-categories') }
+                { label: t.copyMonth, click: () => mainWindow && mainWindow.webContents.send('menu-copy-month') }
+            ]
+        },
+
+        {
+            label: t.settings,
+            submenu: [
+                { label: t.preferences, click: () => mainWindow && mainWindow.webContents.send('menu-settings') }
             ]
         },
         {
-            label: 'Visualizar',
+            label: t.help,
             submenu: [
-                { label: 'Calendário', click: () => mainWindow.webContents.send('menu-view-calendar') },
-                { label: 'Gráficos', click: () => mainWindow.webContents.send('menu-view-charts') },
-                { label: 'Resumo', click: () => mainWindow.webContents.send('menu-view-summary') },
+                { label: t.tutorial, click: () => mainWindow && mainWindow.webContents.send('menu-tutorial') },
                 { type: 'separator' },
-                { label: 'Recarregar', accelerator: 'CmdOrCtrl+R', role: 'reload' },
-                { label: 'DevTools', accelerator: 'F12', role: 'toggleDevTools' }
-            ]
-        },
-        {
-            label: 'Configurações',
-            submenu: [
-                { label: 'Preferências...', click: () => mainWindow.webContents.send('menu-settings') }
-            ]
-        },
-        {
-            label: 'Ajuda',
-            submenu: [
-                { label: 'Tutorial', click: () => mainWindow.webContents.send('menu-tutorial') },
-                { type: 'separator' },
-                { label: 'Verificar Atualizações...', click: () => checkForUpdatesManually() },
-                { type: 'separator' },
-                { label: 'Sobre', click: () => showAbout() }
+                { label: t.about, click: () => showAbout() }
             ]
         }
     ];
@@ -138,15 +154,13 @@ function createMenu() {
     Menu.setApplicationMenu(menu);
 }
 
-/**
- * Shows the About dialog
- */
 function showAbout() {
+    const t = menuTranslations[currentMenuLang] || menuTranslations['pt-BR'];
     dialog.showMessageBox(mainWindow, {
         type: 'info',
-        title: 'Sobre',
+        title: t.about,
         message: 'Finanças Pessoais',
-        detail: 'Versão 1.0.0\n\nAplicativo para controle de finanças pessoais mensais.'
+        detail: `Versão 1.0.0\n\n${t.aboutMsg}`
     });
 }
 
@@ -412,105 +426,32 @@ function setupIpcHandlers() {
         // Return true if "Sim" (index 0) was clicked
         return result.response === 0;
     });
-}
 
-
-// ============== Auto-Update Functions ==============
-
-/**
- * Sets up auto-update event handlers
- */
-function setupAutoUpdater() {
-    autoUpdater.on('checking-for-update', () => {
-        console.log('Checking for updates...');
-    });
-
-    autoUpdater.on('update-available', (info) => {
-        console.log('Update available:', info.version);
-        dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Atualização Disponível',
-            message: `Uma nova versão (${info.version}) está disponível e será baixada automaticamente.`
-        });
-    });
-
-    autoUpdater.on('update-not-available', () => {
-        console.log('No updates available.');
-    });
-
-    autoUpdater.on('download-progress', (progressObj) => {
-        console.log(`Download progress: ${progressObj.percent.toFixed(2)}%`);
-    });
-
-    autoUpdater.on('update-downloaded', (info) => {
-        dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Atualização Pronta',
-            message: `A versão ${info.version} foi baixada. A atualização será instalada ao fechar o aplicativo.`,
-            buttons: ['Reiniciar Agora', 'Mais Tarde']
-        }).then((result) => {
-            if (result.response === 0) {
-                autoUpdater.quitAndInstall();
-            }
-        });
-    });
-
-    autoUpdater.on('error', (error) => {
-        console.error('Auto-updater error:', error);
+    ipcMain.on('change-language', (event, lang) => {
+        createMenu(lang);
     });
 }
 
-/**
- * Manually check for updates
- */
-function checkForUpdatesManually() {
-    autoUpdater.checkForUpdates().then(() => {
-        // The events above will handle the result
-    }).catch((err) => {
-        console.error('Error checking for updates:', err);
-    });
-}
 
-// App lifecycle
+
+
 app.whenReady().then(() => {
     initPaths();
     ensureDirectories();
     setupIpcHandlers();
-    setupAutoUpdater();
-    createMenu();
+    
+    // Read initial language
+    let lang = 'pt-BR';
+    try {
+        const settingsPath = path.join(dataPath, 'settings.json');
+        if (fs.existsSync(settingsPath)) {
+            const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+            if (settings.language) lang = settings.language;
+        }
+    } catch (e) { console.error(e); }
+
+    createMenu(lang);
     createWindow();
-
-    // Check for updates after window is ready (only in production)
-    if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'development') {
-        setTimeout(() => {
-            // Explicitly disable updates until properly configured
-            const enableUpdates = false;
-            if (!enableUpdates) {
-                console.log('Auto-updates disabled. Set enableUpdates to true in main.js to enable.');
-                return;
-            }
-
-            const updateConfigPath = path.join(process.resourcesPath, 'app-update.yml');
-            // Check if config exists and is not generic/example
-            try {
-                if (fs.existsSync(updateConfigPath)) {
-                    const fileContent = fs.readFileSync(updateConfigPath, 'utf-8');
-                    // Simple check if it contains example.com or isn't configured propery
-                    if (fileContent.includes('example.com') || fileContent.includes('generic')) {
-                        console.log('Skipping auto-update: app-update.yml contains example.com or generic provider without proper URL');
-                    } else {
-                        autoUpdater.checkForUpdatesAndNotify().catch(err => {
-                            console.log('Update check failed:', err);
-                        });
-                    }
-                } else {
-                    console.log('Skipping auto-update check: app-update.yml not found');
-                }
-            } catch (error) {
-                console.error('Error reading update config:', error);
-            }
-        }, 3000);
-    }
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {

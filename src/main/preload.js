@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('api', {
     // Listeners
     createBackup: () => ipcRenderer.invoke('create-backup'),
     fetchHolidays: (year, state) => ipcRenderer.invoke('fetch-holidays', year, state),
+    changeLanguage: (lang) => ipcRenderer.send('change-language', lang),
 
     // Menu event listeners
     onMenuNewMonth: (callback) => ipcRenderer.on('menu-new-month', callback),
